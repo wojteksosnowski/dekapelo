@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>dekapelo - System Wskaźników Inwestycji Deweloperskich</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+              800: '#166534',
+              900: '#14532d',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans antialiased min-h-screen flex flex-col">
+
+  <!-- Pasek nawigacyjny z Tailwind CSS -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-16">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-lg bg-emerald-600 flex items-center justify-center text-white font-bold text-xl shadow-md">
+            D
+          </div>
+          <div>
+            <h1 class="text-xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+              dekapelo
+              <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">DevAudit & BI</span>
+            </h1>
+            <p class="text-xs text-slate-500">Lokalny System Audytu i Wskaźników Inwestycji</p>
+          </div>
+        </div>
+        <nav class="flex space-x-1 sm:space-x-4">
+          <button onclick="switchTab('import-tab')" id="nav-import" class="nav-btn px-3 py-2 text-sm font-medium rounded-md text-emerald-700 bg-emerald-50 transition">
+            Import i Audyt
+          </button>
+          <button onclick="switchTab('catalog-tab')" id="nav-catalog" class="nav-btn px-3 py-2 text-sm font-medium rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+            Baza Inwestycji (<span id="projects-count">{{ projects|length }}</span>)
+          </button>
+          <button onclick="switchTab('bi-tab')" id="nav-bi" class="nav-btn px-3 py-2 text-sm font-medium rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+            Benchmarking BI
+          </button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Główny kontener -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+
+    <!-- KOMUNIKATY I ALERTY -->
+    <div id="toast" class="hidden mb-6 p-4 rounded-lg shadow-md transition-all duration-300"></div>
+
+    <!-- ZAKŁADKA 1: IMPORT I AUDYT -->
+    <section id="import-tab" class="tab-content block">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Lewy panel: Wgrywanie pliku i konfiguracja -->
+        <div class="lg:col-span-1 space-y-6">
+          <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+            <h2 class="text-lg font-bold text-slate-900 mb-2">Wczytaj Plik Inwestycji</h2>
+            <p class="text-xs text-slate-500 mb-4">Wybierz lub przeciągnij plik Excel (.xlsx, .xls) lub arkusz ODS z tabelą parametrów i wskaźników inwestycji.</p>
+            
+            <div id="drop-zone" class="border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-lg p-6 text-center cursor-pointer transition bg-slate-50/50 hover:bg-emerald-50/30">
+              <svg class="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <div class="mt-2 text-sm font-medium text-slate-700">Wybierz plik Excel</div>
+              <p class="text-xs text-slate-500 mt-1">.xlsx, .xls, .ods</p>
+              <input type="file" id="file-input" class="hidden" accept=".xlsx,.xls,.ods" onchange="handleFileSelect(this.files[0])">
+            </div>
+
+            <div id="file-info" class="hidden mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-md">
+              <div class="text-xs font-semibold text-emerald-800" id="file-name"></div>
+              <div class="text-xs text-emerald-600" id="file-size"></div>
+            </div>
+          </div>
+
+          <!-- Metadane projektu -->
+          <div id="project-meta-card" class="hidden bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500">Dane Inwestycji</h3>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Nazwa Inwestycji *</label>
+              <input type="text" id="project-name-input" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-slate-700 mb-1">Miasto</label>
+                <input type="text" id="city-input" placeholder="np. Warszawa, Gdańsk" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-700 mb-1">Dzielnica</label>
+                <input type="text" id="district-input" placeholder="np. Bemowo, Orunia" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Deweloper / Spółka celowa</label>
+              <input type="text" id="developer-input" placeholder="np. Develia" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Notatki / Uwagi</label>
+              <textarea id="notes-input" rows="2" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none"></textarea>
+            </div>
+            <button onclick="saveStagingProject()" id="save-btn" class="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm rounded-lg shadow transition flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+              Zatwierdź i Zapisz w Bazie SQLite
+            </button>
+          </div>
+        </div>
+
+        <!-- Prawy panel: Staging Area i Raport Audytu -->
+        <div class="lg:col-span-2 space-y-6">
+          <div id="staging-empty" class="bg-white border border-slate-200 rounded-xl p-12 text-center text-slate-400">
+            <svg class="mx-auto h-16 w-16 mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            <h3 class="text-base font-semibold text-slate-600">Strefa Buforowa (Staging Area) jest pusta</h3>
+            <p class="text-sm mt-1">Wgraj plik z tabelą wskaźników po lewej stronie, aby uruchomić automatyczny audyt matematyczny i logiczny.</p>
+          </div>
+
+          <div id="staging-content" class="hidden space-y-6">
+            <!-- Pasek podsumowania audytu -->
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <span class="text-xs uppercase tracking-wider font-semibold text-slate-400">Wynik Audytu Pliku</span>
+                <h3 class="text-lg font-bold text-slate-900" id="audit-headline">Zweryfikowano pomyślnie</h3>
+              </div>
+              <div class="flex gap-2">
+                <span id="badge-pass" class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">0 Poprawnych</span>
+                <span id="badge-warn" class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">0 Ostrzeżeń</span>
+                <span id="badge-fail" class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800">0 Błędów</span>
+              </div>
+            </div>
+
+            <!-- Karty Faz i Audytu -->
+            <div id="phases-container" class="space-y-6"></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ZAKŁADKA 2: KATALOG INWESTYCJI -->
+    <section id="catalog-tab" class="tab-content hidden">
+      <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-slate-200 flex flex-wrap justify-between items-center gap-4">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">Baza Zapisanych Inwestycji</h2>
+            <p class="text-xs text-slate-500">Zestawienie projektów i zarejestrowanych faz w lokalnej bazie SQLite.</p>
+          </div>
+          <button onclick="loadProjectsCatalog()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg transition">
+            Odśwież Listę
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
+            <thead class="bg-slate-50 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+              <tr>
+                <th class="px-6 py-3">Inwestycja</th>
+                <th class="px-6 py-3">Miasto / Dzielnica</th>
+                <th class="px-6 py-3">Fazy w Bazie</th>
+                <th class="px-6 py-3">PUM (m²)</th>
+                <th class="px-6 py-3">Lokale</th>
+                <th class="px-6 py-3">Wskaźnik MP</th>
+                <th class="px-6 py-3">Sprawność Nadziemia</th>
+                <th class="px-6 py-3 text-right">Akcje</th>
+              </tr>
+            </thead>
+            <tbody id="projects-table-body" class="divide-y divide-slate-100 text-slate-800">
+              <!-- Wiersze generowane dynamicznie -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ZAKŁADKA 3: BENCHMARKING BI -->
+    <section id="bi-tab" class="tab-content hidden space-y-6">
+      <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+        <h2 class="text-lg font-bold text-slate-900 mb-1">Porównanie Projektów i Faz (Benchmarking)</h2>
+        <p class="text-xs text-slate-500 mb-4">Zaznacz fazy inwestycji, które chcesz zestawić na wykresach porównawczych.</p>
+        
+        <div id="compare-selection" class="flex flex-wrap gap-2 mb-4">
+          <!-- Checkboxy faz generowane dynamicznie -->
+        </div>
+
+        <button onclick="runComparison()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs rounded-lg shadow transition">
+          Wygeneruj Zestawienie Porównawcze
+        </button>
+      </div>
+
+      <!-- Wykresy BI z Tailwind grid -->
+      <div id="bi-charts-section" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <h3 class="text-sm font-bold text-slate-800 mb-4">PUM (m²) oraz Liczba Lokali</h3>
+          <canvas id="chart-pum" height="220"></canvas>
+        </div>
+        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <h3 class="text-sm font-bold text-slate-800 mb-4">Wskaźniki Sprawności i Nasycenia MP</h3>
+          <canvas id="chart-ratios" height="220"></canvas>
+        </div>
+      </div>
+
+      <!-- Tabela Zestawienia -->
+      <div id="bi-table-card" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-slate-200 font-bold text-sm text-slate-900">
+          Szczegółowa Tabela Porównawcza Wskaźników
+        </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-slate-200 text-xs text-left">
+            <thead class="bg-slate-50 font-semibold text-slate-600" id="compare-table-head"></thead>
+            <tbody class="divide-y divide-slate-100" id="compare-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
+    dekapelo &bull; Lokalny System Audytu i Wskaźników Inwestycji Deweloperskich &bull; 100% On-Premise & SQLite
+  </footer>
+
+  <script>
+    let currentStagingData = null;
+    let chartPumInstance = null;
+    let chartRatiosInstance = null;
+
+    // Przełączanie zakładek
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('bg-emerald-50', 'text-emerald-700');
+        btn.classList.add('text-slate-600');
+      });
+
+      document.getElementById(tabId).classList.remove('hidden');
+      if (tabId === 'import-tab') {
+        document.getElementById('nav-import').classList.add('bg-emerald-50', 'text-emerald-700');
+      } else if (tabId === 'catalog-tab') {
+        document.getElementById('nav-catalog').classList.add('bg-emerald-50', 'text-emerald-700');
+        loadProjectsCatalog();
+      } else if (tabId === 'bi-tab') {
+        document.getElementById('nav-bi').classList.add('bg-emerald-50', 'text-emerald-700');
+        loadBISelection();
+      }
+    }
+
+    // Drag and drop obsługa
+    const dropZone = document.getElementById('drop-zone');
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-emerald-500'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-emerald-500'));
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('border-emerald-500');
+      if (e.dataTransfer.files.length > 0) handleFileSelect(e.dataTransfer.files[0]);
+    });
+    dropZone.addEventListener('click', () => document.getElementById('file-input').click());
+
+    function showToast(msg, isError = false) {
+      const toast = document.getElementById('toast');
+      toast.innerText = msg;
+      toast.className = `mb-6 p-4 rounded-lg shadow-md text-sm font-medium ${isError ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'}`;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 5000);
+    }
+
+    // Wysłanie pliku do parsowania w strefie buforowej
+    async function handleFileSelect(file) {
+      if (!file) return;
+      document.getElementById('file-info').classList.remove('hidden');
+      document.getElementById('file-name').innerText = file.name;
+      document.getElementById('file-size').innerText = `${(file.size / 1024).toFixed(1)} KB`;
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const res = await fetch('/api/parse-staging', { method: 'POST', body: formData });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail || 'Błąd parsowania pliku.');
+        }
+        const data = await res.json();
+        currentStagingData = data;
+        renderStagingArea(data);
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    // Prezentacja wyników audytu w Staging Area
+    function renderStagingArea(data) {
+      document.getElementById('staging-empty').classList.add('hidden');
+      document.getElementById('staging-content').classList.remove('hidden');
+      document.getElementById('project-meta-card').classList.remove('hidden');
+      document.getElementById('project-name-input').value = data.suggested_project_name || '';
+
+      let passCount = 0, warnCount = 0, failCount = 0;
+      const container = document.getElementById('phases-container');
+      container.innerHTML = '';
+
+      // Cross-phase audyt jeśli występuje
+      if (data.cross_phase_audit && data.cross_phase_audit.length > 0) {
+        const crossCard = document.createElement('div');
+        crossCard.className = 'bg-slate-100 p-4 rounded-xl border border-slate-300';
+        crossCard.innerHTML = `<h4 class="text-xs font-bold uppercase text-slate-700 tracking-wider mb-2">Audyt Zgodności Międzyfazowej (Cross-Phase)</h4>`;
+        const list = document.createElement('div');
+        list.className = 'space-y-1.5';
+        data.cross_phase_audit.forEach(ar => {
+          if (ar.status === 'PASS') passCount++;
+          else if (ar.status === 'WARNING') warnCount++;
+          else failCount++;
+
+          const badgeColor = ar.status === 'PASS' ? 'text-emerald-700 bg-emerald-50' : (ar.status === 'WARNING' ? 'text-amber-700 bg-amber-50' : 'text-rose-700 bg-rose-50');
+          list.innerHTML += `<div class="text-xs p-2 rounded flex items-center justify-between ${badgeColor}">
+            <span><strong>${ar.rule_name}:</strong> ${ar.message}</span>
+            <span class="font-bold text-[10px] px-1.5 py-0.5 rounded uppercase">${ar.status}</span>
+          </div>`;
+        });
+        crossCard.appendChild(list);
+        container.appendChild(crossCard);
+      }
+
+      // Poszczególne fazy
+      for (const [phaseName, pData] of Object.entries(data.phases_data)) {
+        const auditItems = data.audit_by_phase[phaseName] || [];
+        auditItems.forEach(ar => {
+          if (ar.status === 'PASS') passCount++;
+          else if (ar.status === 'WARNING') warnCount++;
+          else failCount++;
+        });
+
+        const card = document.createElement('div');
+        card.className = 'bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4';
+        
+        let kpiSummaryHtml = `
+          <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+            <div>
+              <span class="text-xs font-semibold text-slate-400 uppercase">Faza Opracowania</span>
+              <h4 class="text-base font-bold text-slate-900">${phaseName}</h4>
+            </div>
+            <div class="text-right">
+              <span class="text-xs text-slate-500">PUM: <strong>${pData.pum ? pData.pum.toLocaleString('pl-PL') + ' m²' : '-'}</strong></span>
+              <span class="mx-2 text-slate-300">|</span>
+              <span class="text-xs text-slate-500">Lokale: <strong>${pData.ilosc_lokali_mieszkalnych || '-'}</strong></span>
+              <span class="mx-2 text-slate-300">|</span>
+              <span class="text-xs text-slate-500">Wskaźnik MP: <strong>${pData.wskaznik_mp ? pData.wskaznik_mp.toFixed(2) : '-'}</strong></span>
+            </div>
+          </div>
+        `;
+
+        // Logi audytu dla fazy
+        let auditRowsHtml = '';
+        auditItems.forEach(ar => {
+          const badgeColor = ar.status === 'PASS' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : (ar.status === 'WARNING' ? 'text-amber-700 bg-amber-50 border-amber-200' : 'text-rose-700 bg-rose-50 border-rose-200');
+          auditRowsHtml += `
+            <div class="border ${badgeColor} p-2.5 rounded-lg text-xs flex justify-between items-start">
+              <div>
+                <span class="font-bold">${ar.rule_name}</span> &bull; ${ar.message}
+              </div>
+              <span class="font-bold text-[10px] px-2 py-0.5 rounded-full uppercase ml-2">${ar.status}</span>
+            </div>
+          `;
+        });
+
+        // Wskaźniki w zwięzłej tabeli
+        const importantKeys = [
+          ['Pow. działki', pData.powierzchnia_dzialki ? pData.powierzchnia_dzialki + ' m²' : '-'],
+          ['Pow. zabudowy', pData.powierzchnia_zabudowy ? pData.powierzchnia_zabudowy + ' m²' : '-'],
+          ['Pow. całkowita (Pc)', pData.powierzchnia_calkowita ? pData.powierzchnia_calkowita + ' m²' : '-'],
+          ['Nadziemie (Pcn)', pData.pow_calkowita_nadziemia ? pData.pow_calkowita_nadziemia + ' m²' : '-'],
+          ['Podziemie (Pcp)', pData.pow_calkowita_podziemia ? pData.pow_calkowita_podziemia + ' m²' : '-'],
+          ['Miejsca parkingowe', pData.suma_miejsc_parkingowych || '-'],
+          ['Sprawność nadziemia', pData.wskaznik_pumiu_pcn ? pData.wskaznik_pumiu_pcn.toFixed(3) : '-'],
+          ['Średnia wielkość lokalu', pData.srednia_wielkosc_mieszkania ? pData.srednia_wielkosc_mieszkania.toFixed(2) + ' m²' : '-']
+        ];
+
+        let gridHtml = `<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-lg text-xs">`;
+        importantKeys.forEach(([label, val]) => {
+          gridHtml += `<div><span class="text-slate-400 block">${label}</span><strong class="text-slate-800">${val}</strong></div>`;
+        });
+        gridHtml += `</div>`;
+
+        card.innerHTML = kpiSummaryHtml + gridHtml + `<div class="space-y-1.5"><h5 class="text-xs font-semibold text-slate-500 uppercase">Wyniki Walidacji Matematycznej:</h5>${auditRowsHtml}</div>`;
+        container.appendChild(card);
+      }
+
+      document.getElementById('badge-pass').innerText = `${passCount} Poprawnych`;
+      document.getElementById('badge-warn').innerText = `${warnCount} Ostrzeżeń`;
+      document.getElementById('badge-fail').innerText = `${failCount} Błędów`;
+    }
+
+    // Zapis ze Staging do Bazy
+    async function saveStagingProject() {
+      if (!currentStagingData) return;
+      const projectName = document.getElementById('project-name-input').value.trim();
+      if (!projectName) {
+        showToast('Wpisz nazwę projektu!', true);
+        return;
+      }
+
+      const payload = {
+        project_name: projectName,
+        city: document.getElementById('city-input').value.trim(),
+        district: document.getElementById('district-input').value.trim(),
+        developer: document.getElementById('developer-input').value.trim(),
+        notes: document.getElementById('notes-input').value.trim(),
+        source_filename: currentStagingData.filename,
+        phases_data: currentStagingData.phases_data
+      };
+
+      try {
+        const res = await fetch('/api/save-project', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('Błąd zapisu projektu.');
+        const result = await res.json();
+        showToast(result.message);
+        switchTab('catalog-tab');
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    // Ładowanie listy projektów do tabeli katalogu
+    async function loadProjectsCatalog() {
+      try {
+        const res = await fetch('/api/projects');
+        const projects = await res.json();
+        document.getElementById('projects-count').innerText = projects.length;
+
+        const tbody = document.getElementById('projects-table-body');
+        tbody.innerHTML = '';
+        if (projects.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="8" class="px-6 py-8 text-center text-slate-400">Brak projektów w bazie. Zaimportuj pierwszy plik w zakładce 'Import i Audyt'.</td></tr>`;
+          return;
+        }
+
+        projects.forEach(p => {
+          const phasesStr = p.phases.map(ph => `<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700">${ph.phase_name}</span>`).join(' ');
+          const latestPhase = p.phases[0] || {};
+          
+          tbody.innerHTML += `
+            <tr class="hover:bg-slate-50 transition">
+              <td class="px-6 py-4 font-bold text-slate-900">${p.project_name}</td>
+              <td class="px-6 py-4 text-slate-600">${p.city || '-'} ${p.district ? ' / ' + p.district : ''}</td>
+              <td class="px-6 py-4">${phasesStr}</td>
+              <td class="px-6 py-4 font-medium">${latestPhase.pum ? latestPhase.pum.toLocaleString('pl-PL') + ' m²' : '-'}</td>
+              <td class="px-6 py-4">${latestPhase.lokale || '-'}</td>
+              <td class="px-6 py-4">${latestPhase.wskaznik_mp ? latestPhase.wskaznik_mp.toFixed(2) : '-'}</td>
+              <td class="px-6 py-4">${latestPhase.sprawnosc_nadziemia ? latestPhase.sprawnosc_nadziemia.toFixed(3) : '-'}</td>
+              <td class="px-6 py-4 text-right">
+                <button onclick="deleteProject(${p.project_id})" class="text-rose-600 hover:text-rose-800 text-xs font-semibold px-2 py-1 rounded hover:bg-rose-50 transition">
+                  Usuń
+                </button>
+              </td>
+            </tr>
+          `;
+        });
+      } catch (err) {
+        showToast('Błąd pobierania listy projektów', true);
+      }
+    }
+
+    async function deleteProject(id) {
+      if (!confirm('Czy na pewno chcesz usunąć ten projekt z bazy?')) return;
+      try {
+        const res = await fetch(`/api/projects/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          showToast('Projekt usunięty');
+          loadProjectsCatalog();
+        }
+      } catch (err) {
+        showToast('Błąd usuwania projektu', true);
+      }
+    }
+
+    // Ładowanie checkboxów faz do benchmarkingu BI
+    async function loadBISelection() {
+      const res = await fetch('/api/projects');
+      const projects = await res.json();
+      const container = document.getElementById('compare-selection');
+      container.innerHTML = '';
+
+      if (projects.length === 0) {
+        container.innerHTML = `<span class="text-xs text-slate-400">Brak projektów w bazie do porównania.</span>`;
+        return;
+      }
+
+      projects.forEach(p => {
+        p.phases.forEach((ph, idx) => {
+          const checked = (projects.length <= 4) ? 'checked' : '';
+          container.innerHTML += `
+            <label class="flex items-center space-x-2 text-xs bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 cursor-pointer hover:bg-emerald-50 transition">
+              <input type="checkbox" name="phase_compare" value="${ph.phase_id}" ${checked} class="rounded text-emerald-600 focus:ring-emerald-500">
+              <span class="font-medium text-slate-800">${p.project_name} (${ph.phase_name})</span>
+            </label>
+          `;
+        });
+      });
+
+      if (projects.length > 0) runComparison();
+    }
+
+    // Wykonanie porównania BI i wyrysowanie wykresów
+    async function runComparison() {
+      const checkboxes = document.querySelectorAll('input[name="phase_compare"]:checked');
+      const phaseIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+
+      if (phaseIds.length === 0) {
+        showToast('Zaznacz co najmniej jedną fazę!', true);
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/compare', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phase_ids: phaseIds })
+        });
+        const data = await res.json();
+        renderCharts(data);
+        renderCompareTable(data);
+      } catch (err) {
+        showToast('Błąd generowania wykresów BI', true);
+      }
+    }
+
+    function renderCharts(data) {
+      const labels = data.labels;
+      const pumValues = data.metrics['PUM (m²)'];
+      const unitsValues = data.metrics['Liczba Mieszkań'];
+      const sprawnoscValues = data.metrics['Sprawność Nadziemia (PUMiU/Pcn)'];
+      const mpValues = data.metrics['Wskaźnik MP'];
+
+      // Chart 1: PUM i Mieszkania
+      if (chartPumInstance) chartPumInstance.destroy();
+      const ctx1 = document.getElementById('chart-pum').getContext('2d');
+      chartPumInstance = new Chart(ctx1, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            { label: 'PUM (m²)', data: pumValues, backgroundColor: 'rgba(16, 185, 129, 0.7)', yAxisID: 'y' },
+            { label: 'Liczba Mieszkań', data: unitsValues, backgroundColor: 'rgba(59, 130, 246, 0.7)', yAxisID: 'y1' }
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: { type: 'linear', position: 'left', title: { display: true, text: 'm²' } },
+            y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'szt.' } }
+          }
+        }
+      });
+
+      // Chart 2: Sprawność i Wskaźnik MP
+      if (chartRatiosInstance) chartRatiosInstance.destroy();
+      const ctx2 = document.getElementById('chart-ratios').getContext('2d');
+      chartRatiosInstance = new Chart(ctx2, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            { label: 'Sprawność Nadziemia', data: sprawnoscValues, backgroundColor: 'rgba(245, 158, 11, 0.7)' },
+            { label: 'Wskaźnik MP/lokal', data: mpValues, backgroundColor: 'rgba(139, 92, 246, 0.7)' }
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+    }
+
+    function renderCompareTable(data) {
+      const head = document.getElementById('compare-table-head');
+      const body = document.getElementById('compare-table-body');
+      
+      head.innerHTML = `<tr>
+        <th class="px-4 py-3">Inwestycja (Faza)</th>
+        <th class="px-4 py-3">PUM (m²)</th>
+        <th class="px-4 py-3">Lokale</th>
+        <th class="px-4 py-3">Śr. Mieszkanie</th>
+        <th class="px-4 py-3">MP</th>
+        <th class="px-4 py-3">Wskaźnik MP</th>
+        <th class="px-4 py-3">Pcn (Nadziemie)</th>
+        <th class="px-4 py-3">Sprawność Nadziemia</th>
+        <th class="px-4 py-3">Sprawność Całkowita</th>
+      </tr>`;
+
+      body.innerHTML = '';
+      data.detailed_rows.forEach(r => {
+        body.innerHTML += `
+          <tr class="hover:bg-slate-50">
+            <td class="px-4 py-2.5 font-bold text-slate-800">${r.label}</td>
+            <td class="px-4 py-2.5">${r.pum ? r.pum.toLocaleString('pl-PL') : '-'}</td>
+            <td class="px-4 py-2.5">${r.lokale || '-'}</td>
+            <td class="px-4 py-2.5">${r.srm ? r.srm.toFixed(2) + ' m²' : '-'}</td>
+            <td class="px-4 py-2.5">${r.mp || '-'}</td>
+            <td class="px-4 py-2.5 font-semibold text-emerald-700">${r.wsk_mp ? r.wsk_mp.toFixed(2) : '-'}</td>
+            <td class="px-4 py-2.5">${r.pcn ? r.pcn.toLocaleString('pl-PL') : '-'}</td>
+            <td class="px-4 py-2.5 font-semibold text-amber-700">${r.sprawnosc_nadziemia ? r.sprawnosc_nadziemia.toFixed(3) : '-'}</td>
+            <td class="px-4 py-2.5">${r.sprawnosc_calkowita ? r.sprawnosc_calkowita.toFixed(3) : '-'}</td>
+          </tr>
+        `;
+      });
+    }
+
+    // Automatyczny start
+    document.addEventListener('DOMContentLoaded', () => {
+      loadProjectsCatalog();
+    });
+  </script>
+</body>
+</html>
