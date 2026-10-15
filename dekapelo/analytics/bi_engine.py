@@ -186,7 +186,7 @@ class BIEngine:
                     "stage": ph.stage_name,
                     "phase": ph.phase_name,
                     "display_name": ph.display_name,
-                    "pumiu": round(pumiu, 2),
+                    "pumiu": round(pumiu, 2) if pumiu is not None else None,
                     "dzialka": round(pd, 2),
                     "chlonnosc": round(chlonnosc, 3)
                 }
@@ -199,20 +199,20 @@ class BIEngine:
                 "stage": ph.stage_name,
                 "phase": ph.phase_name,
                 "display_name": ph.display_name,
-                "pum": k.pum,
-                "puu": k.puu,
-                "pumiu": pumiu,
-                "dzialka": pd,
+                "pum": round(k.pum, 2) if k.pum is not None else None,
+                "puu": round(k.puu, 2) if k.puu is not None else None,
+                "pumiu": round(pumiu, 2) if pumiu is not None else None,
+                "dzialka": round(pd, 2) if pd is not None else None,
                 "chlonnosc": round(chlonnosc, 3) if chlonnosc is not None else None,
                 "lokale": k.ilosc_lokali_mieszkalnych,
-                "srm": k.srednia_wielkosc_mieszkania,
+                "srm": round(k.srednia_wielkosc_mieszkania, 2) if k.srednia_wielkosc_mieszkania is not None else None,
                 "mp": k.suma_miejsc_parkingowych,
-                "wsk_mp": k.wskaznik_mp,
-                "pcn": k.pow_calkowita_nadziemia,
-                "pc": k.powierzchnia_calkowita,
-                "elewacja": k.powierzchnia_elewacji,
-                "sprawnosc_nadziemia": k.wskaznik_pumiu_pcn,
-                "sprawnosc_calkowita": k.wskaznik_pumiu_pc
+                "wsk_mp": round(k.wskaznik_mp, 2) if k.wskaznik_mp is not None else None,
+                "pcn": round(k.pow_calkowita_nadziemia, 2) if k.pow_calkowita_nadziemia is not None else None,
+                "pc": round(k.powierzchnia_calkowita, 2) if k.powierzchnia_calkowita is not None else None,
+                "elewacja": round(k.powierzchnia_elewacji, 2) if k.powierzchnia_elewacji is not None else None,
+                "sprawnosc_nadziemia": round(k.wskaznik_pumiu_pcn, 4) if k.wskaznik_pumiu_pcn is not None else None,
+                "sprawnosc_calkowita": round(k.wskaznik_pumiu_pc, 4) if k.wskaznik_pumiu_pc is not None else None
             })
 
         return comparison

@@ -260,3 +260,43 @@ def test_delete_stage_api(client):
     projects = client.get("/api/projects").json()
     assert not any(p["project_id"] == proj_id for p in projects)
 
+
+def test_compare_phases_with_null_pumiu(client):
+    """Test weryfikujący, że /api/compare nie rzuca 500 gdy pumiu jest równe None."""
+    payload = {
+        "project_name": "Test Null Pumiu Compare Project",
+        "city": "Kraków",
+        "source_filename": "test_null_pum.xlsx",
+        "phases_data": {
+            "ETAP 1": {
+                "stage_name": "ETAP 1",
+                "phase_name": "Koncepcja",
+                "pum": None,
+                "puu": None,
+                "suma_pum_i_puu": None,
+                "powierzchnia_dzialki": 5000.0,
+                "wskaznik_pumiu_pd": 1.25,
+                "ilosc_lokali_mieszkalnych": None
+            }
+        }
+    }
+    save_res = client.post("/api/save-project", json=payload)
+    assert save_res.status_code == 200
+    proj_id = save_res.json()["project_id"]
+
+    projects = client.get("/api/projects").json()
+    proj = next(p for p in projects if p["project_id"] == proj_id)
+    phase_id = proj["phases"][0]["phase_id"]
+
+    # Wywołanie /api/compare - przed poprawką rzucało 500 Internal Server Error (TypeError on round(None, 2))
+    compare_res = client.post("/api/compare", json={"phase_ids": [phase_id]})
+    assert compare_res.status_code == 200
+    comp_data = compare_res.json()
+    assert "chlonnosc_scatter" in comp_data
+    assert len(comp_data["detailed_rows"]) == 1
+    assert comp_data["detailed_rows"][0]["pumiu"] is None
+
+    # Czyszczenie
+    client.delete(f"/api/projects/{proj_id}")
+
+
