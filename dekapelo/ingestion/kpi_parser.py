@@ -110,7 +110,7 @@ KPI_FIELD_MAPPINGS: Dict[str, List[str]] = {
 
     # 2. Powierzchnie Użytkowe i Mieszkaniowe
     "suma_pum_i_puu": [
-        "suma powierzchni użytkowej mieszkań i usług", "powierzchnia użytkowa (pumiu)", "usable area (pumiu)"
+        "suma powierzchni użytkowej mieszkań i usług", "powierzchnia użytkowa (pumiu)", "usable area (pumiu)", "pumiu"
     ],
     "suma_lokali": [
         "suma lokali mieszkalnych i usługowych", "suma lokali"
@@ -118,8 +118,14 @@ KPI_FIELD_MAPPINGS: Dict[str, List[str]] = {
     "ilosc_lokali_mieszkalnych": [
         "ilość lokali mieszkalnych", "ilosc lokali mieszkalnych", "liczba mieszkań", "liczba mieszkan", "no of apartments"
     ],
+    "pum_iso": [
+        "powierzchnia użytkowa mieszkań (pum) wg iso", "mieszkań wg iso", "mieszkan wg iso", "pum wg iso", "wg pn-iso", "pn-iso 9836", "pn-iso", "pum iso", "iso 9836", "duży pum", "duzy pum"
+    ],
+    "pum_pnb": [
+        "powierzchnia użytkowa mieszkań (pum) wg pn-70", "mieszkań wg pn-70", "pn-70/b-02365", "pn-70/b", "pn-70", "pum wg pn", "wg pnb", "pum pnb", "pum pn", "wg pn-b", "mały pum", "maly pum"
+    ],
     "pum": [
-        "powierzchnia użytkowa lokali mieszkalnych", "powierzchnia uzytkowa lokali mieszkalnych", "powierzchnia użytkowa mieszkań", "powierzchnia uzytkowa mieszkan", "usable area of apartments", "housing usable area (pum)", "(pum)", "pum wg"
+        "powierzchnia użytkowa lokali mieszkalnych", "powierzchnia uzytkowa lokali mieszkalnych", "powierzchnia użytkowa mieszkań", "powierzchnia uzytkowa mieszkan", "usable area of apartments", "housing usable area (pum)", "(pum)"
     ],
     "srednia_wielkosc_mieszkania": [
         "średnia wielkość lokalu mieszkalnego", "srednia wielkosc lokalu mieszkalnego", "średnia powierzchnia mieszkania", "average apartment area"
@@ -187,7 +193,7 @@ KPI_FIELD_MAPPINGS: Dict[str, List[str]] = {
         "powierzchnia komórek lokatorskich/boksów/rowerowni w garażu", "powierzchnia komórek lokatorskich"
     ],
     "pow_wspolna_hali_garazowej": [
-        "powierzchnia wspólna hali garażowej", "powierzchnia całkowita podziemna"
+        "powierzchnia wspólna hali garażowej"
     ],
     "pow_uzytkowa_hali_garazowej": [
         "powierzchnia użytkowa hali garażowej", "powierzchnia użytkowa hali garażowej (bez pomieszczeń technicznych)"
@@ -240,7 +246,7 @@ KPI_FIELD_MAPPINGS: Dict[str, List[str]] = {
         "powierzchnia całkowita nadziemia (bez balkonów i loggi)", "powierzchnia całkowita nadziemia (bez balkonów", "powierzchnia całkowita nadziemia bez balkonów", "powierzchnia całkowita nadziemna", "overground gross area", "pcn"
     ],
     "pow_calkowita_podziemia": [
-        "powierzchnia całkowita części podziemnej (garażu)", "powierzchnia całkowita podziemna", "underground gross area", "pcp", "pcg"
+        "powierzchnia całkowita części podziemnej (garażu)", "powierzchnia całkowita podziemna", "underground gross area", "(pcp)", "(pcg)"
     ],
     "powierzchnia_elewacji": [
         "powierzchnia elewacji", "facade area", "pe"
@@ -282,6 +288,46 @@ KPI_FIELD_MAPPINGS: Dict[str, List[str]] = {
     ]
 }
 
+RATIO_INDICATOR_FIELDS = {
+    "wskaznik_pow_biologicznie_czynnej",
+    "wspolczynnik_powierzchni_zabudowy",
+    "wskaznik_mp",
+    "wskaznik_pumiu_pcn",
+    "wskaznik_pumiu_pcnb",
+    "wskaznik_pumiu_pc",
+    "wskaznik_pumiu_pcb",
+    "wskaznik_pcg_impg",
+    "wskaznik_pumiu_pd",
+    "wskaznik_pumiu_klatka",
+    "wskaznik_ilm_iw",
+    "wskaznik_pc_pcg",
+    "wskaznik_ilm_iks",
+    "wskaznik_pe_pumiu",
+    "srednia_wielkosc_mieszkania",
+}
+
+RATIO_LABEL_KEYWORDS = [
+    "/", "sprawność", "sprawnosc", "wskaźnik", "wskaznik", "współczynnik", "wspolczynnik", "iloraz", "per", "stosunek", "efficiency"
+]
+
+
+def is_excluded_phase_name(text: str) -> bool:
+    """Sprawdza czy nazwa kolumny odpowiada wykluczonym fazom ('PLANNING requirements', 'KU')."""
+    t = text.lower().strip()
+    if not t:
+        return False
+    if "planning" in t or "planning requirements" in t:
+        return True
+    if "koncepcja urbanistyczna" in t:
+        return True
+    alnum = re.sub(r"[^a-z0-9]", "", t)
+    if alnum == "ku":
+        return True
+    tokens = re.split(r"[\s\-_/.,;:()]+", t)
+    if "ku" in tokens:
+        return True
+    return False
+
 
 class KPIParser:
     """Parser tabel parametrów i wskaźników inwestycji z plików Excel (.xlsx, .ods)."""
@@ -319,33 +365,13 @@ class KPIParser:
                 return s
         return sheet_names[0]
 
-    def _extract_phases_and_data(self, df: pd.DataFrame) -> Dict[str, Dict[str, Any]]:
-        """Lokalizuje wiersz nagłówkowy z fazami i mapuje wiersze parametrów."""
+    def detect_phase_columns(self, df: pd.DataFrame) -> Tuple[int, Dict[int, str]]:
+        """Lokalizuje wiersz nagłówkowy z fazami i zwraca (header_row_idx, phase_columns)."""
         header_row_idx = None
-        phase_columns: Dict[int, str] = {}  # {col_idx: 'APK', col_idx2: 'WPK', ...}
-        param_col_idx = 0
-
-        # Poszukiwanie wiersza nagłówkowego zawierającego fazy projektu
-        # Fazy 'PLANNING requirements' oraz 'KU' nie występują jako fazy w naszych danych i są wykluczone
+        phase_columns: Dict[int, str] = {}
         known_phase_markers = [
             "apk", "wpk", "projekt budowlany", "pb", "projekt wykonawczy", "wykonawczy", "pw", "koncepcja", "bazowy"
         ]
-
-        def is_excluded_phase_name(text: str) -> bool:
-            t = text.lower().strip()
-            if not t:
-                return False
-            if "planning" in t or "planning requirements" in t:
-                return True
-            if "koncepcja urbanistyczna" in t:
-                return True
-            alnum = re.sub(r"[^a-z0-9]", "", t)
-            if alnum == "ku":
-                return True
-            tokens = re.split(r"[\s\-_/.,;:()]+", t)
-            if "ku" in tokens:
-                return True
-            return False
 
         for r_idx in range(min(15, len(df))):
             row_vals = [clean_text(v) for v in df.iloc[r_idx].values]
@@ -355,7 +381,6 @@ class KPIParser:
                     continue
                 for marker in known_phase_markers:
                     if marker in val:
-                        # Nazwa fazy (np. 'APK', 'Projekt Budowlany', 'PW')
                         detected_phases[c_idx] = df.iloc[r_idx, c_idx]
                         break
 
@@ -364,12 +389,17 @@ class KPIParser:
                 phase_columns = detected_phases
                 break
 
-        # Jeśli nie znaleziono standardowego nagłówka faz, sprawdźmy kolumny od indeksu 2 wzwyż
         if not phase_columns:
             header_row_idx = 2 if len(df) > 2 else 0
-            # Załóżmy domyślną fazę z pierwszej dostępnej kolumny liczbowej
             for c_idx in range(2, min(df.shape[1], 6)):
                 phase_columns[c_idx] = f"Faza {c_idx - 1}"
+
+        return header_row_idx, phase_columns
+
+    def _extract_phases_and_data(self, df: pd.DataFrame) -> Dict[str, Dict[str, Any]]:
+        """Lokalizuje wiersz nagłówkowy z fazami i mapuje wiersze parametrów."""
+        header_row_idx, phase_columns = self.detect_phase_columns(df)
+        param_col_idx = 0
 
         # Ustalenie, w której kolumnie znajduje się nazwa parametru (0 lub 1)
         for r_idx in range(header_row_idx + 1, min(header_row_idx + 8, len(df))):
@@ -424,6 +454,31 @@ class KPIParser:
                             else:
                                 results[clean_phase_name][matched_field] = f_val
 
+        # Inteligentne uzgadnianie wariantu wiodącego PUM (PNB vs PN-ISO) dla każdego etapu
+        for clean_phase_name, pdata in results.items():
+            pumiu = pdata.get("suma_pum_i_puu")
+            puu = pdata.get("puu") or 0.0
+            pum_pnb = pdata.get("pum_pnb")
+            pum_iso = pdata.get("pum_iso")
+            curr_pum = pdata.get("pum")
+
+            if pum_pnb is not None or pum_iso is not None:
+                if pumiu is not None:
+                    expected_from_pumiu = pumiu - puu
+                    pnb_diff = abs(pum_pnb - expected_from_pumiu) if pum_pnb is not None else float("inf")
+                    iso_diff = abs(pum_iso - expected_from_pumiu) if pum_iso is not None else float("inf")
+                    if pnb_diff <= 1.0 and pnb_diff < iso_diff:
+                        pdata["pum"] = pum_pnb
+                    elif iso_diff <= 1.0 and iso_diff < pnb_diff:
+                        pdata["pum"] = pum_iso
+                    elif pum_pnb is not None and (curr_pum is None or curr_pum == 0):
+                        pdata["pum"] = pum_pnb
+                    elif pum_iso is not None and (curr_pum is None or curr_pum == 0):
+                        pdata["pum"] = pum_iso
+                else:
+                    if curr_pum is None or curr_pum == 0:
+                        pdata["pum"] = pum_pnb if (pum_pnb is not None and pum_pnb > 0) else pum_iso
+
         # Usunięcie faz, które nie zawierają żadnych wczytanych parametrów
         filtered_results = {
             k: v for k, v in results.items() if len(v.get("raw_parameters", {})) > 0
@@ -431,10 +486,34 @@ class KPIParser:
 
         return filtered_results if filtered_results else results
 
+    def _is_ratio_label(self, cleaned_label: str) -> bool:
+        """Sprawdza czy etykieta reprezentuje wskaźnik ilorazowy lub sprawność."""
+        norm_free = cleaned_label.replace("pn-70/b-02365", "").replace("pn-70/b", "").replace("pn-70/", "").replace("pn/b", "")
+        return any(kw in norm_free for kw in RATIO_LABEL_KEYWORDS)
+
     def _match_field(self, cleaned_label: str) -> Optional[str]:
-        """Dopasowuje oczyszczoną etykietę do pola modelu ProjectKPI."""
-        # Najpierw dopasowanie precyzyjne / podciągów
+        """Dopasowuje oczyszczoną etykietę do pola modelu ProjectKPI z uwzględnieniem semantyki."""
+        # 1. Specyficzne normy PUM (ISO vs PNB) mają najwyższy priorytet
+        for high_prio in ["pum_iso", "pum_pnb"]:
+            for pat in KPI_FIELD_MAPPINGS[high_prio]:
+                if pat in cleaned_label:
+                    return high_prio
+
+        is_ratio = self._is_ratio_label(cleaned_label)
+
+        # 2. Przeszukiwanie pozostałych pól z filtrem semantycznym (wielkości bezwzględne vs wskaźniki)
         for field, patterns in KPI_FIELD_MAPPINGS.items():
+            if field in ("pum_iso", "pum_pnb"):
+                continue
+
+            is_field_ratio = field in RATIO_INDICATOR_FIELDS
+            # Etykieta ze znakiem ilorazu/wskaźnika nie może pasować do metraży ani sztuk
+            if is_ratio and not is_field_ratio:
+                continue
+            # Etykieta bez cech wskaźnika nie może pasować do pól wskaźnikowych (poza średnią pow. mieszkania)
+            if not is_ratio and is_field_ratio and field != "srednia_wielkosc_mieszkania":
+                continue
+
             for pat in patterns:
                 if pat in cleaned_label:
                     return field

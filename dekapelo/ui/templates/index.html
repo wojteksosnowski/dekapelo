@@ -597,7 +597,7 @@
               <h4 class="text-base font-bold text-slate-900">${phaseName}</h4>
             </div>
             <div class="text-right">
-              <span class="text-xs text-slate-500">PUM: <strong>${pData.pum ? pData.pum.toLocaleString('pl-PL') + ' m²' : '-'}</strong></span>
+              <span class="text-xs text-slate-500">PUM: <strong>${pData.pum ? pData.pum.toLocaleString('pl-PL') + ' m²' : '-'}</strong>${(pData.pum_pnb || pData.pum_iso) ? ` <span class="text-[11px] text-emerald-700 font-medium">(PNB: ${pData.pum_pnb ? pData.pum_pnb.toLocaleString('pl-PL') : '-'} | ISO: ${pData.pum_iso ? pData.pum_iso.toLocaleString('pl-PL') : '-'})</span>` : ''}</span>
               <span class="mx-2 text-slate-300">|</span>
               <span class="text-xs text-slate-500">Lokale: <strong>${pData.ilosc_lokali_mieszkalnych || '-'}</strong></span>
               <span class="mx-2 text-slate-300">|</span>

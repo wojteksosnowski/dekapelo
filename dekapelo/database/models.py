@@ -92,7 +92,9 @@ class ProjectKPI(Base):
     suma_pum_i_puu = Column(Float, nullable=True)  # PUM + PUU
     suma_lokali = Column(Integer, nullable=True)
     ilosc_lokali_mieszkalnych = Column(Integer, nullable=True)  # im
-    pum = Column(Float, nullable=True)  # Powierzchnia użytkowa mieszkań
+    pum = Column(Float, nullable=True)  # Powierzchnia użytkowa mieszkań (zbilansowana)
+    pum_iso = Column(Float, nullable=True)  # PUM wg normy PN-ISO 9836 (duży PUM)
+    pum_pnb = Column(Float, nullable=True)  # PUM wg normy PNB / PN-70/B-02365 (mały PUM)
     srednia_wielkosc_mieszkania = Column(Float, nullable=True)  # śrm
     ilosc_lokali_uslugowych = Column(Integer, nullable=True)  # iu
     puu = Column(Float, nullable=True)  # Powierzchnia usługowa

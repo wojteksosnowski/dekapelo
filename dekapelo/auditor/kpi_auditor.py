@@ -26,26 +26,57 @@ class KPIAuditor:
         # 1. Bilans Powierzchni Użytkowej (PUM + PUU == PUMiU)
         pumiu = kpi_data.get("suma_pum_i_puu")
         pum = kpi_data.get("pum")
+        pum_iso = kpi_data.get("pum_iso")
+        pum_pnb = kpi_data.get("pum_pnb")
         puu = kpi_data.get("puu") or 0.0
 
-        if pumiu is not None and pum is not None:
-            expected_pumiu = pum + puu
+        if pumiu is not None and (pum is not None or pum_pnb is not None or pum_iso is not None):
+            # Ustal wiodący wariant do bilansu
+            effective_pum = pum
+            matched_norm = None
+
+            if pum_pnb is not None and abs(pumiu - (pum_pnb + puu)) <= self.tolerance_surface:
+                effective_pum = pum_pnb
+                matched_norm = "PNB (PN-70)"
+            elif pum_iso is not None and abs(pumiu - (pum_iso + puu)) <= self.tolerance_surface:
+                effective_pum = pum_iso
+                matched_norm = "PN-ISO 9836"
+            elif pum is not None:
+                effective_pum = pum
+                if pum_pnb is not None and abs(pum - pum_pnb) <= self.tolerance_surface:
+                    matched_norm = "PNB (PN-70)"
+                elif pum_iso is not None and abs(pum - pum_iso) <= self.tolerance_surface:
+                    matched_norm = "PN-ISO 9836"
+            elif pum_pnb is not None:
+                effective_pum = pum_pnb
+            else:
+                effective_pum = pum_iso
+
+            expected_pumiu = effective_pum + puu
             diff = abs(pumiu - expected_pumiu)
             if diff <= self.tolerance_surface:
+                alt_info = ""
+                if matched_norm == "PNB (PN-70)" and pum_iso is not None and abs(pum_iso - effective_pum) > 0.5:
+                    alt_info = f" (norma PNB; wariant PN-ISO: {pum_iso:.2f} m²)"
+                elif matched_norm == "PN-ISO 9836" and pum_pnb is not None and abs(pum_pnb - effective_pum) > 0.5:
+                    alt_info = f" (norma PN-ISO; wariant PNB: {pum_pnb:.2f} m²)"
                 results.append(AuditResult(
                     category="MATH",
                     rule_name="Bilans PUM i PUU",
                     status="PASS",
-                    message=f"PUM+PUU ({expected_pumiu:.2f} m²) jest zgodne z PUMiU ({pumiu:.2f} m²)",
+                    message=f"PUM+PUU ({expected_pumiu:.2f} m²) jest zgodne z PUMiU ({pumiu:.2f} m²){alt_info}",
                     expected_value=expected_pumiu,
                     actual_value=pumiu
                 ))
             else:
+                extra_msg = ""
+                if pum_iso is not None and pum_pnb is not None:
+                    extra_msg = f" (w arkuszu: PUM wg PNB={pum_pnb:.2f} m², PUM wg ISO={pum_iso:.2f} m²)"
                 results.append(AuditResult(
                     category="MATH",
                     rule_name="Bilans PUM i PUU",
                     status="FAIL",
-                    message=f"Rozbieżność sumy PUM+PUU: obliczono {expected_pumiu:.2f} m², w arkuszu podano {pumiu:.2f} m² (różnica {diff:.2f} m²)",
+                    message=f"Rozbieżność sumy PUM+PUU: obliczono {expected_pumiu:.2f} m², w arkuszu podano {pumiu:.2f} m² (różnica {diff:.2f} m²){extra_msg}",
                     expected_value=expected_pumiu,
                     actual_value=pumiu
                 ))
@@ -140,16 +171,24 @@ class KPIAuditor:
         # 3. Średnia Powierzchnia Mieszkania (śrm == PUM / im)
         srm = kpi_data.get("srednia_wielkosc_mieszkania")
         im = kpi_data.get("ilosc_lokali_mieszkalnych")
-        if srm is not None and pum is not None and im and im > 0:
-            calc_srm = pum / im
-            diff = abs(srm - calc_srm)
-            if diff <= 0.1:
+        pum_candidates = [p for p in [pum, pum_pnb, pum_iso] if p is not None and p > 0]
+        if srm is not None and pum_candidates and im and im > 0:
+            best_diff = float("inf")
+            best_calc_srm = pum_candidates[0] / im
+            for cand in pum_candidates:
+                cand_srm = cand / im
+                diff_cand = abs(srm - cand_srm)
+                if diff_cand < best_diff:
+                    best_diff = diff_cand
+                    best_calc_srm = cand_srm
+
+            if best_diff <= 0.1:
                 results.append(AuditResult(
                     category="MATH",
                     rule_name="Średnia Powierzchnia Mieszkania",
                     status="PASS",
-                    message=f"Średnia powierzchnia {srm:.2f} m² zgodna z PUM/im ({calc_srm:.2f} m²)",
-                    expected_value=calc_srm,
+                    message=f"Średnia powierzchnia {srm:.2f} m² zgodna z PUM/im ({best_calc_srm:.2f} m²)",
+                    expected_value=best_calc_srm,
                     actual_value=srm
                 ))
             else:
@@ -157,8 +196,8 @@ class KPIAuditor:
                     category="MATH",
                     rule_name="Średnia Powierzchnia Mieszkania",
                     status="WARNING",
-                    message=f"Rozbieżność średniej pow. mieszkania: podano {srm:.2f} m², z przeliczenia PUM/im wynika {calc_srm:.2f} m²",
-                    expected_value=calc_srm,
+                    message=f"Rozbieżność średniej pow. mieszkania: podano {srm:.2f} m², z przeliczenia PUM/im wynika {best_calc_srm:.2f} m²",
+                    expected_value=best_calc_srm,
                     actual_value=srm
                 ))
 

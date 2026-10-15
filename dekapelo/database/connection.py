@@ -26,6 +26,20 @@ def get_db():
 
 
 def init_db(engine_override=None):
-    """Inicjalizacja schematu bazy danych."""
+    """Inicjalizacja schematu bazy danych z automatyczną migracją brakujących kolumn."""
     target_engine = engine_override or engine
     Base.metadata.create_all(bind=target_engine)
+    try:
+        from sqlalchemy import inspect, text
+        inspector = inspect(target_engine)
+        if "project_kpi" in inspector.get_table_names():
+            existing_cols = {col["name"] for col in inspector.get_columns("project_kpi")}
+            with target_engine.connect() as conn:
+                if "pum_iso" not in existing_cols:
+                    conn.execute(text("ALTER TABLE project_kpi ADD COLUMN pum_iso FLOAT"))
+                if "pum_pnb" not in existing_cols:
+                    conn.execute(text("ALTER TABLE project_kpi ADD COLUMN pum_pnb FLOAT"))
+                conn.commit()
+    except Exception:
+        pass
+
