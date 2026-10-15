@@ -97,29 +97,49 @@
 
           <!-- Metadane projektu -->
           <div id="project-meta-card" class="hidden bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500">Dane Inwestycji</h3>
+            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500">Dane Inwestycji i Etapu</h3>
             <div>
               <label class="block text-xs font-medium text-slate-700 mb-1">Nazwa Inwestycji *</label>
-              <input type="text" id="project-name-input" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+              <input type="text" id="project-name-input" list="projects-datalist" oninput="onProjectNameInput(this.value)" placeholder="np. Dąbka Vita, Morska Vita" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+              <datalist id="projects-datalist"></datalist>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Etap Inwestycji *</label>
+              <input type="text" id="stage-name-input" list="stages-datalist" placeholder="np. APK, WPK, Projekt Budowlany, PW" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+              <datalist id="stages-datalist"></datalist>
+              <p class="text-[11px] text-slate-400 mt-0.5">Podstawowa jednostka badawcza powiązana z inwestycją.</p>
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="block text-xs font-medium text-slate-700 mb-1">Miasto</label>
-                <input type="text" id="city-input" placeholder="np. Warszawa, Gdańsk" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                <input type="text" id="city-input" list="cities-datalist" placeholder="np. Warszawa, Gdańsk" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                <datalist id="cities-datalist"></datalist>
               </div>
               <div>
                 <label class="block text-xs font-medium text-slate-700 mb-1">Dzielnica</label>
-                <input type="text" id="district-input" placeholder="np. Bemowo, Orunia" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                <input type="text" id="district-input" list="districts-datalist" placeholder="np. Bemowo, Orunia" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                <datalist id="districts-datalist"></datalist>
               </div>
             </div>
             <div>
               <label class="block text-xs font-medium text-slate-700 mb-1">Deweloper / Spółka celowa</label>
-              <input type="text" id="developer-input" placeholder="np. Develia" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-            </div>
+              <input type="text" id="developer-input" list="developers-datalist" placeholder="np. Develia" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+              <datalist id="developers-datalist"></datalist>
             <div>
               <label class="block text-xs font-medium text-slate-700 mb-1">Notatki / Uwagi</label>
               <textarea id="notes-input" rows="2" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none"></textarea>
             </div>
+            <div id="db-suggestions-box" class="hidden bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-xs space-y-1.5">
+              <div class="font-bold text-emerald-800 flex items-center justify-between">
+                <span class="flex items-center gap-1.5">
+                  <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                  Podpowiedzi z Bazy Danych
+                </span>
+                <span id="db-match-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-200 text-emerald-900">Rozpoznano w bazie</span>
+              </div>
+              <div id="db-suggestions-content" class="text-slate-700 space-y-1"></div>
+            </div>
+
             <button onclick="saveStagingProject()" id="save-btn" class="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm rounded-lg shadow transition flex items-center justify-center gap-2">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
               Zatwierdź i Zapisz w Bazie SQLite
@@ -217,6 +237,16 @@
           <h3 class="text-sm font-bold text-slate-800 mb-4">Wskaźniki Sprawności i Nasycenia MP</h3>
           <canvas id="chart-ratios" height="220"></canvas>
         </div>
+        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm col-span-1 lg:col-span-2">
+          <div class="flex flex-wrap justify-between items-center mb-4 gap-2">
+            <div>
+              <h3 class="text-sm font-bold text-slate-800">Chłonność Terenu vs Powierzchnia Działki</h3>
+              <p class="text-xs text-slate-500">Oś X: Powierzchnia działki (m²) &bull; Oś Y: Chłonność inwestycji (PUMiU / Powierzchnia działki)</p>
+            </div>
+            <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">Analiza Chłonności Gruntu</span>
+          </div>
+          <canvas id="chart-chlonnosc" height="110"></canvas>
+        </div>
       </div>
 
       <!-- Tabela Zestawienia -->
@@ -243,6 +273,189 @@
     let currentStagingData = null;
     let chartPumInstance = null;
     let chartRatiosInstance = null;
+    let chartChlonnoscInstance = null;
+    let cachedSuggestions = null;
+
+    // Pobranie i obsługa podpowiedzi z bazy danych
+    async function loadSuggestions() {
+      try {
+        const res = await fetch('/api/suggestions');
+        if (!res.ok) return;
+        cachedSuggestions = await res.json();
+        populateDatalists(cachedSuggestions);
+      } catch (e) {
+        console.error('Błąd ładowania podpowiedzi z bazy:', e);
+      }
+    }
+
+    function populateDatalists(data) {
+      if (!data) return;
+      if (data.projects) {
+        const pList = document.getElementById('projects-datalist');
+        if (pList) {
+          pList.innerHTML = data.projects.map(p => `<option value="${p.name}">${p.name}${p.city ? ' (' + p.city + ')' : ''}</option>`).join('');
+        }
+      }
+      if (data.stages) {
+        const sList = document.getElementById('stages-datalist');
+        if (sList) {
+          sList.innerHTML = data.stages.map(s => `<option value="${s}"></option>`).join('');
+        }
+      }
+      if (data.cities) {
+        const cList = document.getElementById('cities-datalist');
+        if (cList) {
+          cList.innerHTML = data.cities.map(c => `<option value="${c}"></option>`).join('');
+        }
+      }
+      if (data.districts) {
+        const dList = document.getElementById('districts-datalist');
+        if (dList) {
+          dList.innerHTML = data.districts.map(d => `<option value="${d}"></option>`).join('');
+        }
+      }
+      if (data.developers) {
+        const devList = document.getElementById('developers-datalist');
+        if (devList) {
+          devList.innerHTML = data.developers.map(dev => `<option value="${dev}"></option>`).join('');
+        }
+      }
+    }
+
+    let projectNameDebounceTimer = null;
+    function onProjectNameInput(val) {
+      clearTimeout(projectNameDebounceTimer);
+      if (!val) {
+        const box = document.getElementById('db-suggestions-box');
+        if (box) box.classList.add('hidden');
+        return;
+      }
+      if (cachedSuggestions && cachedSuggestions.projects) {
+        const clean = val.trim().toLowerCase();
+        const match = cachedSuggestions.projects.find(p => p.name.trim().toLowerCase() === clean || p.name.trim().toLowerCase().includes(clean));
+        if (match) {
+          if (match.city && !document.getElementById('city-input').value) document.getElementById('city-input').value = match.city;
+          if (match.district && !document.getElementById('district-input').value) document.getElementById('district-input').value = match.district;
+          if (match.developer && !document.getElementById('developer-input').value) document.getElementById('developer-input').value = match.developer;
+          if (match.notes && !document.getElementById('notes-input').value) document.getElementById('notes-input').value = match.notes;
+        }
+      }
+
+      projectNameDebounceTimer = setTimeout(async () => {
+        if (!currentStagingData) return;
+        try {
+          const res = await fetch('/api/project-audit-context', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              project_name: val.trim(),
+              phases_data: currentStagingData.phases_data || {}
+            })
+          });
+          if (res.ok) {
+            const ctx = await res.json();
+            updateAuditContextUI(ctx);
+          }
+        } catch (e) {
+          console.error('Błąd pobierania kontekstu audytu:', e);
+        }
+      }, 300);
+    }
+
+    function updateAuditContextUI(ctx) {
+      if (!ctx) return;
+      const box = document.getElementById('db-suggestions-box');
+      const content = document.getElementById('db-suggestions-content');
+      const badge = document.getElementById('db-match-badge');
+      if (!box || !content || !badge) return;
+
+      if (ctx.existing_project_found) {
+        box.classList.remove('hidden');
+        badge.innerText = 'Inwestycja w bazie';
+        badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-200 text-emerald-900';
+
+        let html = `<div>Inwestycja: <strong>${ctx.matched_project_name}</strong></div>`;
+        if (ctx.existing_phases && ctx.existing_phases.length > 0) {
+          html += `<div>Zarejestrowane etapy w bazie: <span class="font-medium text-slate-800">${ctx.existing_phases.join(', ')}</span></div>`;
+        }
+        if (ctx.field_suggestions && ctx.field_suggestions.length > 0) {
+          html += `<div class="mt-1 space-y-1">`;
+          ctx.field_suggestions.forEach(s => {
+            html += `<div class="bg-white p-1.5 rounded border border-emerald-200 flex items-center justify-between">
+              <span>${s.label}</span>
+              <button type="button" onclick="applyFieldSuggestion('${s.phase}', '${s.field}', ${s.suggested_value})" class="ml-2 px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold">Użyj wartości</button>
+            </div>`;
+          });
+          html += `</div>`;
+        }
+        content.innerHTML = html;
+
+        if (ctx.city && !document.getElementById('city-input').value) document.getElementById('city-input').value = ctx.city;
+        if (ctx.district && !document.getElementById('district-input').value) document.getElementById('district-input').value = ctx.district;
+        if (ctx.developer && !document.getElementById('developer-input').value) document.getElementById('developer-input').value = ctx.developer;
+        if (ctx.notes && !document.getElementById('notes-input').value) document.getElementById('notes-input').value = ctx.notes;
+        if (ctx.suggested_stage_name && !document.getElementById('stage-name-input').value) {
+          document.getElementById('stage-name-input').value = ctx.suggested_stage_name;
+        }
+      } else {
+        if (ctx.benchmarks && ctx.benchmarks.total_projects > 0) {
+          box.classList.remove('hidden');
+          badge.innerText = 'Nowa inwestycja';
+          badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700';
+          content.innerHTML = `
+            <div>Średnie referencyjne bazy (${ctx.benchmarks.total_projects} inwestycji):</div>
+            <div class="grid grid-cols-2 gap-1 text-[11px] text-slate-600 mt-0.5">
+              <span>Śr. sprawność PUMiU/PCn: <strong>${ctx.benchmarks.avg_sprawnosc_nadziemia}</strong></span>
+              <span>Śr. wskaźnik MP: <strong>${ctx.benchmarks.avg_wskaznik_mp}</strong></span>
+              <span>Śr. pow. mieszkania: <strong>${ctx.benchmarks.avg_srednia_pow_mieszkania} m²</strong></span>
+            </div>
+          `;
+        } else {
+          box.classList.add('hidden');
+        }
+      }
+
+      // Aktualizacja audytu międzyfazowego z bazy
+      if (currentStagingData && ctx.cross_phase_audit && JSON.stringify(currentStagingData.cross_phase_audit) !== JSON.stringify(ctx.cross_phase_audit)) {
+        currentStagingData.cross_phase_audit = ctx.cross_phase_audit;
+        renderCrossPhaseCard(ctx.cross_phase_audit);
+      }
+    }
+
+    function applyFieldSuggestion(phase, field, value) {
+      if (currentStagingData && currentStagingData.phases_data && currentStagingData.phases_data[phase]) {
+        currentStagingData.phases_data[phase][field] = value;
+        showToast(`Zaktualizowano ${field} dla ${phase} na ${value}`);
+        renderStagingArea(currentStagingData);
+      }
+    }
+
+    function renderCrossPhaseCard(crossPhaseAudit) {
+      let card = document.getElementById('cross-phase-card');
+      const container = document.getElementById('phases-container');
+      if (!card) {
+        card = document.createElement('div');
+        card.id = 'cross-phase-card';
+        card.className = 'bg-slate-100 p-4 rounded-xl border border-slate-300';
+        container.insertBefore(card, container.firstChild);
+      }
+      if (!crossPhaseAudit || crossPhaseAudit.length === 0) {
+        card.classList.add('hidden');
+        return;
+      }
+      card.classList.remove('hidden');
+      card.innerHTML = `<h4 class="text-xs font-bold uppercase text-slate-700 tracking-wider mb-2">Audyt Zgodności Międzyfazowej (Cross-Phase & Baza)</h4>`;
+      const list = document.createElement('div');
+      list.className = 'space-y-1.5';
+      crossPhaseAudit.forEach(ar => {
+        const badgeColor = ar.status === 'PASS' ? 'text-emerald-700 bg-emerald-50' : (ar.status === 'WARNING' ? 'text-amber-700 bg-amber-50' : 'text-rose-700 bg-rose-50');
+        list.innerHTML += `<div class="text-xs p-2 rounded flex items-center justify-between ${badgeColor}">
+          <span><strong>${ar.rule_name}:</strong> ${ar.message}</span>
+          <span class="font-bold text-[10px] px-1.5 py-0.5 rounded uppercase">${ar.status}</span>
+        </div>`;
+      });
+      card.appendChild(list);
+    }
 
     // Przełączanie zakładek
     function switchTab(tabId) {
@@ -312,33 +525,35 @@
       document.getElementById('staging-empty').classList.add('hidden');
       document.getElementById('staging-content').classList.remove('hidden');
       document.getElementById('project-meta-card').classList.remove('hidden');
+
+      // Automatyczne podpowiedzi na podstawie bazy i analizy pliku
       document.getElementById('project-name-input').value = data.suggested_project_name || '';
+      document.getElementById('stage-name-input').value = data.suggested_stage_name || '';
+      if (data.suggested_city) document.getElementById('city-input').value = data.suggested_city;
+      if (data.suggested_district) document.getElementById('district-input').value = data.suggested_district;
+      if (data.suggested_developer) document.getElementById('developer-input').value = data.suggested_developer;
+      if (data.suggested_notes) document.getElementById('notes-input').value = data.suggested_notes;
+
+      if (data.all_known_stages) {
+        const sList = document.getElementById('stages-datalist');
+        if (sList) {
+          sList.innerHTML = data.all_known_stages.map(s => `<option value="${s}"></option>`).join('');
+        }
+      }
+
+      updateAuditContextUI(data);
 
       let passCount = 0, warnCount = 0, failCount = 0;
       const container = document.getElementById('phases-container');
       container.innerHTML = '';
 
-      // Cross-phase audyt jeśli występuje
-      if (data.cross_phase_audit && data.cross_phase_audit.length > 0) {
-        const crossCard = document.createElement('div');
-        crossCard.className = 'bg-slate-100 p-4 rounded-xl border border-slate-300';
-        crossCard.innerHTML = `<h4 class="text-xs font-bold uppercase text-slate-700 tracking-wider mb-2">Audyt Zgodności Międzyfazowej (Cross-Phase)</h4>`;
-        const list = document.createElement('div');
-        list.className = 'space-y-1.5';
-        data.cross_phase_audit.forEach(ar => {
-          if (ar.status === 'PASS') passCount++;
-          else if (ar.status === 'WARNING') warnCount++;
-          else failCount++;
-
-          const badgeColor = ar.status === 'PASS' ? 'text-emerald-700 bg-emerald-50' : (ar.status === 'WARNING' ? 'text-amber-700 bg-amber-50' : 'text-rose-700 bg-rose-50');
-          list.innerHTML += `<div class="text-xs p-2 rounded flex items-center justify-between ${badgeColor}">
-            <span><strong>${ar.rule_name}:</strong> ${ar.message}</span>
-            <span class="font-bold text-[10px] px-1.5 py-0.5 rounded uppercase">${ar.status}</span>
-          </div>`;
-        });
-        crossCard.appendChild(list);
-        container.appendChild(crossCard);
-      }
+      // Cross-phase audyt jeśli występuje (w tym z etapami zapisanymi wcześniej w bazie)
+      renderCrossPhaseCard(data.cross_phase_audit || []);
+      (data.cross_phase_audit || []).forEach(ar => {
+        if (ar.status === 'PASS') passCount++;
+        else if (ar.status === 'WARNING') warnCount++;
+        else failCount++;
+      });
 
       // Poszczególne fazy
       for (const [phaseName, pData] of Object.entries(data.phases_data)) {
@@ -355,7 +570,7 @@
         let kpiSummaryHtml = `
           <div class="flex justify-between items-center border-b border-slate-100 pb-3">
             <div>
-              <span class="text-xs font-semibold text-slate-400 uppercase">Faza Opracowania</span>
+              <span class="text-xs font-semibold text-slate-400 uppercase">Faza / Etap Opracowania</span>
               <h4 class="text-base font-bold text-slate-900">${phaseName}</h4>
             </div>
             <div class="text-right">
@@ -418,8 +633,11 @@
         return;
       }
 
+      const stageName = document.getElementById('stage-name-input').value.trim();
+
       const payload = {
         project_name: projectName,
+        stage_name: stageName,
         city: document.getElementById('city-input').value.trim(),
         district: document.getElementById('district-input').value.trim(),
         developer: document.getElementById('developer-input').value.trim(),
@@ -437,6 +655,7 @@
         if (!res.ok) throw new Error('Błąd zapisu projektu.');
         const result = await res.json();
         showToast(result.message);
+        loadSuggestions(); // Odświeżenie listy podpowiedzi po zapisie
         switchTab('catalog-tab');
       } catch (err) {
         showToast(err.message, true);
@@ -592,6 +811,68 @@
           scales: { y: { beginAtZero: true } }
         }
       });
+
+      // Chart 3: Chłonność vs Powierzchnia Działki (Scatter)
+      if (chartChlonnoscInstance) chartChlonnoscInstance.destroy();
+      const chlonnoscCanvas = document.getElementById('chart-chlonnosc');
+      if (chlonnoscCanvas) {
+        const ctx3 = chlonnoscCanvas.getContext('2d');
+        const scatterData = (data.chlonnosc_scatter || data.scatter_chlonnosc || []).map(pt => ({
+          x: pt.x,
+          y: pt.y,
+          label: pt.label,
+          pumiu: pt.pumiu
+        }));
+
+        chartChlonnoscInstance = new Chart(ctx3, {
+          type: 'scatter',
+          data: {
+            datasets: [{
+              label: 'Etap Inwestycji',
+              data: scatterData,
+              backgroundColor: 'rgba(16, 185, 129, 0.85)',
+              borderColor: 'rgb(5, 150, 105)',
+              borderWidth: 2,
+              pointRadius: 8,
+              pointHoverRadius: 12
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    const pt = context.raw;
+                    return `${pt.label}: Działka = ${pt.x ? pt.x.toLocaleString('pl-PL') : '-'} m², Chłonność = ${pt.y}${pt.pumiu ? ' (PUMiU: ' + pt.pumiu.toLocaleString('pl-PL') + ' m²)' : ''}`;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                type: 'linear',
+                position: 'bottom',
+                title: {
+                  display: true,
+                  text: 'Powierzchnia działki (m²)',
+                  font: { weight: 'bold' }
+                }
+              },
+              y: {
+                type: 'linear',
+                position: 'left',
+                title: {
+                  display: true,
+                  text: 'Chłonność (PUMiU / Powierzchnia działki)',
+                  font: { weight: 'bold' }
+                },
+                beginAtZero: true
+              }
+            }
+          }
+        });
+      }
     }
 
     function renderCompareTable(data) {
@@ -600,6 +881,8 @@
       
       head.innerHTML = `<tr>
         <th class="px-4 py-3">Inwestycja (Faza)</th>
+        <th class="px-4 py-3">Pow. Działki</th>
+        <th class="px-4 py-3">Chłonność (PUMiU/Pd)</th>
         <th class="px-4 py-3">PUM (m²)</th>
         <th class="px-4 py-3">Lokale</th>
         <th class="px-4 py-3">Śr. Mieszkanie</th>
@@ -615,6 +898,8 @@
         body.innerHTML += `
           <tr class="hover:bg-slate-50">
             <td class="px-4 py-2.5 font-bold text-slate-800">${r.label}</td>
+            <td class="px-4 py-2.5 font-medium text-slate-700">${r.dzialka ? r.dzialka.toLocaleString('pl-PL') + ' m²' : '-'}</td>
+            <td class="px-4 py-2.5 font-bold text-emerald-700">${r.chlonnosc !== null && r.chlonnosc !== undefined ? r.chlonnosc.toFixed(3) : '-'}</td>
             <td class="px-4 py-2.5">${r.pum ? r.pum.toLocaleString('pl-PL') : '-'}</td>
             <td class="px-4 py-2.5">${r.lokale || '-'}</td>
             <td class="px-4 py-2.5">${r.srm ? r.srm.toFixed(2) + ' m²' : '-'}</td>
@@ -631,6 +916,7 @@
     // Automatyczny start
     document.addEventListener('DOMContentLoaded', () => {
       loadProjectsCatalog();
+      loadSuggestions();
     });
   </script>
 </body>

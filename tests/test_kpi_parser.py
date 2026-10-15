@@ -48,3 +48,39 @@ def test_parse_dabka_vita():
     apk = phases["APK"]
     assert apk.get("pum") == 5038.24
     assert apk.get("ilosc_lokali_mieszkalnych") == 99
+
+
+def test_excluded_phases_planning_and_ku():
+    """Weryfikuje, że 'PLANNING requirements' oraz 'KU' nie są traktowane jako fazy projektowe."""
+    import pandas as pd
+    df_data = [
+        ["Parametr", "PLANNING requirements", "KU", "Koncepcja Urbanistyczna", "K.U.", "APK"],
+        ["Powierzchnia działki", 1000.0, 1000.0, 1000.0, 1000.0, 1000.0],
+        ["PUM", 700.0, 700.0, 700.0, 700.0, 700.0]
+    ]
+    df = pd.DataFrame(df_data)
+    parser = KPIParser.__new__(KPIParser)
+    results = parser._extract_phases_and_data(df)
+    assert "PLANNING requirements" not in results
+    assert "KU" not in results
+    assert "Koncepcja Urbanistyczna" not in results
+    assert "K.U." not in results
+    assert "APK" in results
+
+
+def test_recognition_of_projekt_wykonawczy():
+    """Weryfikuje, że 'Projekt Wykonawczy' jest poprawnie rozpoznawany jako faza (PW)."""
+    import pandas as pd
+    df_data = [
+        ["Parametr", "Projekt Wykonawczy", "WG. PROJEKTU ZIELENI"],
+        ["Powierzchnia działki", 5855.5, 5855.5],
+        ["Powierzchnia użytkowa mieszkań (PUM) wg ISO", 3500.0, 3500.0]
+    ]
+    df = pd.DataFrame(df_data)
+    parser = KPIParser.__new__(KPIParser)
+    results = parser._extract_phases_and_data(df)
+    assert "Projekt Wykonawczy" in results
+    assert "WG. PROJEKTU ZIELENI" not in results
+    pw_data = results["Projekt Wykonawczy"]
+    assert pw_data.get("powierzchnia_dzialki") == 5855.5
+    assert pw_data.get("pum") == 3500.0

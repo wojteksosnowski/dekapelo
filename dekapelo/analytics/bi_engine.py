@@ -81,6 +81,11 @@ class BIEngine:
                 "sprawnosc_nadziemia": k.wskaznik_pumiu_pcn if k else None,
                 "sprawnosc_calkowita": k.wskaznik_pumiu_pc if k else None,
                 "intensywnosc_dzialka": k.wskaznik_pumiu_pd if k else None,
+                "chlonnosc": (
+                    round(k.suma_pum_i_puu / k.powierzchnia_dzialki, 3)
+                    if (k and k.powierzchnia_dzialki and k.suma_pum_i_puu and k.powierzchnia_dzialki > 0)
+                    else (round(k.wskaznik_pumiu_pd, 3) if (k and k.wskaznik_pumiu_pd is not None) else None)
+                ),
                 "audit_warnings": len([a for a in s.audit_logs if a.status == "WARNING"]),
                 "audit_fails": len([a for a in s.audit_logs if a.status == "FAIL"])
             })
@@ -100,8 +105,12 @@ class BIEngine:
                 "Sprawność Nadziemia (PUMiU/Pcn)": [],
                 "Sprawność Całkowita (PUMiU/Pc)": [],
                 "Intensywność (PUMiU/Pd)": [],
+                "Chłonność (PUMiU/Pd)": [],
+                "Powierzchnia Działki (m²)": [],
                 "Mieszkań na Windę": []
             },
+            "chlonnosc_scatter": [],
+            "scatter_chlonnosc": [],
             "detailed_rows": []
         }
 
@@ -112,14 +121,39 @@ class BIEngine:
             if not k:
                 continue
 
+            pd = k.powierzchnia_dzialki
+            pumiu = k.suma_pum_i_puu if k.suma_pum_i_puu is not None else (((k.pum or 0.0) + (k.puu or 0.0)) if (k.pum is not None or k.puu is not None) else None)
+            if pd and pd > 0 and pumiu and pumiu > 0:
+                chlonnosc = pumiu / pd
+            elif k.wskaznik_pumiu_pd is not None:
+                chlonnosc = k.wskaznik_pumiu_pd
+            else:
+                chlonnosc = None
+
             comparison["metrics"]["PUM (m²)"].append(k.pum or 0.0)
             comparison["metrics"]["Liczba Mieszkań"].append(k.ilosc_lokali_mieszkalnych or 0)
             comparison["metrics"]["Śr. Wielkość Mieszkania (m²)"].append(k.srednia_wielkosc_mieszkania or 0.0)
             comparison["metrics"]["Wskaźnik MP"].append(k.wskaznik_mp or 0.0)
             comparison["metrics"]["Sprawność Nadziemia (PUMiU/Pcn)"].append(k.wskaznik_pumiu_pcn or 0.0)
             comparison["metrics"]["Sprawność Całkowita (PUMiU/Pc)"].append(k.wskaznik_pumiu_pc or 0.0)
-            comparison["metrics"]["Intensywność (PUMiU/Pd)"].append(k.wskaznik_pumiu_pd or 0.0)
+            comparison["metrics"]["Intensywność (PUMiU/Pd)"].append(k.wskaznik_pumiu_pd or (chlonnosc or 0.0))
+            comparison["metrics"]["Chłonność (PUMiU/Pd)"].append(round(chlonnosc, 3) if chlonnosc is not None else 0.0)
+            comparison["metrics"]["Powierzchnia Działki (m²)"].append(pd or 0.0)
             comparison["metrics"]["Mieszkań na Windę"].append(k.wskaznik_ilm_iw or 0.0)
+
+            if pd is not None and pd > 0 and chlonnosc is not None:
+                point = {
+                    "x": round(pd, 2),
+                    "y": round(chlonnosc, 3),
+                    "label": label,
+                    "project": ph.project.name,
+                    "phase": ph.phase_name,
+                    "pumiu": round(pumiu, 2),
+                    "dzialka": round(pd, 2),
+                    "chlonnosc": round(chlonnosc, 3)
+                }
+                comparison["chlonnosc_scatter"].append(point)
+                comparison["scatter_chlonnosc"].append(point)
 
             comparison["detailed_rows"].append({
                 "label": label,
@@ -127,6 +161,9 @@ class BIEngine:
                 "phase": ph.phase_name,
                 "pum": k.pum,
                 "puu": k.puu,
+                "pumiu": pumiu,
+                "dzialka": pd,
+                "chlonnosc": round(chlonnosc, 3) if chlonnosc is not None else None,
                 "lokale": k.ilosc_lokali_mieszkalnych,
                 "srm": k.srednia_wielkosc_mieszkania,
                 "mp": k.suma_miejsc_parkingowych,

@@ -119,7 +119,7 @@ KPI_FIELD_MAPPINGS: Dict[str, List[str]] = {
         "ilość lokali mieszkalnych", "ilosc lokali mieszkalnych", "liczba mieszkań", "liczba mieszkan", "no of apartments"
     ],
     "pum": [
-        "powierzchnia użytkowa lokali mieszkalnych", "powierzchnia uzytkowa lokali mieszkalnych", "housing usable area (pum)"
+        "powierzchnia użytkowa lokali mieszkalnych", "powierzchnia uzytkowa lokali mieszkalnych", "powierzchnia użytkowa mieszkań", "powierzchnia uzytkowa mieszkan", "usable area of apartments", "housing usable area (pum)", "(pum)", "pum wg"
     ],
     "srednia_wielkosc_mieszkania": [
         "średnia wielkość lokalu mieszkalnego", "srednia wielkosc lokalu mieszkalnego", "średnia powierzchnia mieszkania", "average apartment area"
@@ -128,7 +128,7 @@ KPI_FIELD_MAPPINGS: Dict[str, List[str]] = {
         "ilość lokali usługowych", "ilosc lokali uslugowych", "liczba lokali usługowych", "no of retail units"
     ],
     "puu": [
-        "powierzchnia lokali usługowych", "powierzchnia uzytkowa usług", "retail usable area (puu)"
+        "powierzchnia lokali usługowych", "powierzchnia uzytkowa usług", "powierzchnia użytkowa usług", "powierzchnia użytkowa lokali usługowych", "powierzchnia uzytkowa lokali uslugowych", "retail usable area (puu)", "(puu)"
     ],
     "powierzchnia_czesci_wspolnych": [
         "powierzchnia części wspólnych", "powierzchnia czesci wspolnych"
@@ -326,14 +326,33 @@ class KPIParser:
         param_col_idx = 0
 
         # Poszukiwanie wiersza nagłówkowego zawierającego fazy projektu
+        # Fazy 'PLANNING requirements' oraz 'KU' nie występują jako fazy w naszych danych i są wykluczone
         known_phase_markers = [
-            "apk", "wpk", "projekt budowlany", "pb", "pw", "ku", "koncepcja", "planning", "bazowy"
+            "apk", "wpk", "projekt budowlany", "pb", "projekt wykonawczy", "wykonawczy", "pw", "koncepcja", "bazowy"
         ]
+
+        def is_excluded_phase_name(text: str) -> bool:
+            t = text.lower().strip()
+            if not t:
+                return False
+            if "planning" in t or "planning requirements" in t:
+                return True
+            if "koncepcja urbanistyczna" in t:
+                return True
+            alnum = re.sub(r"[^a-z0-9]", "", t)
+            if alnum == "ku":
+                return True
+            tokens = re.split(r"[\s\-_/.,;:()]+", t)
+            if "ku" in tokens:
+                return True
+            return False
 
         for r_idx in range(min(15, len(df))):
             row_vals = [clean_text(v) for v in df.iloc[r_idx].values]
             detected_phases = {}
             for c_idx, val in enumerate(row_vals):
+                if is_excluded_phase_name(val):
+                    continue
                 for marker in known_phase_markers:
                     if marker in val:
                         # Nazwa fazy (np. 'APK', 'Projekt Budowlany', 'PW')
@@ -367,6 +386,8 @@ class KPIParser:
         results: Dict[str, Dict[str, Any]] = {}
         for c_idx, phase_name in phase_columns.items():
             clean_phase_name = str(phase_name).strip().replace("\n", " ")
+            if is_excluded_phase_name(clean_phase_name):
+                continue
             if not clean_phase_name:
                 clean_phase_name = f"Faza_Kolumna_{c_idx}"
             results[clean_phase_name] = {

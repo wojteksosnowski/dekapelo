@@ -58,3 +58,118 @@ def test_parse_staging_and_save_api(client):
     # Test usunięcia projektu
     del_res = client.delete(f"/api/projects/{project_id}")
     assert del_res.status_code == 200
+
+
+def test_suggestions_api(client):
+    res = client.get("/api/suggestions")
+    assert res.status_code == 200
+    data = res.json()
+    assert "projects" in data
+    assert "stages" in data
+    assert "cities" in data
+    assert "districts" in data
+    assert "developers" in data
+    assert "APK" in data["stages"]
+    assert "Projekt Budowlany" in data["stages"]
+
+
+def test_compare_api_chlonnosc_scatter(client):
+    # Najpierw zapisujemy projekt testowy z powierzchnią działki i PUM
+    save_payload = {
+        "project_name": "Test Scatter Project",
+        "stage_name": "APK",
+        "city": "Warszawa",
+        "district": "Wola",
+        "developer": "Deweloper Test",
+        "notes": "Test chłonności",
+        "source_filename": "test.xlsx",
+        "phases_data": {
+            "APK": {
+                "powierzchnia_dzialki": 2000.0,
+                "pum": 3000.0,
+                "suma_pum_i_puu": 3200.0,
+                "wskaznik_pumiu_pd": 1.6,
+                "pow_calkowita_nadziemia": 4500.0,
+                "ilosc_lokali_mieszkalnych": 50,
+                "raw_parameters": {}
+            }
+        }
+    }
+    save_res = client.post("/api/save-project", json=save_payload)
+    assert save_res.status_code == 200
+    proj_id = save_res.json()["project_id"]
+
+    # Pobieramy fazę
+    projects = client.get("/api/projects").json()
+    saved = next(p for p in projects if p["project_id"] == proj_id)
+    phase_id = saved["phases"][0]["phase_id"]
+
+    # Porównanie
+    comp_res = client.post("/api/compare", json={"phase_ids": [phase_id]})
+    assert comp_res.status_code == 200
+    comp_data = comp_res.json()
+    assert "chlonnosc_scatter" in comp_data
+    assert len(comp_data["chlonnosc_scatter"]) == 1
+    pt = comp_data["chlonnosc_scatter"][0]
+    assert pt["x"] == 2000.0
+    assert pt["y"] == 1.6
+    assert "Chłonność (PUMiU/Pd)" in comp_data["metrics"]
+
+    # Cleanup
+    client.delete(f"/api/projects/{proj_id}")
+
+
+def test_project_audit_context_api(client):
+    # Najpierw zapisujemy projekt
+    save_payload = {
+        "project_name": "Inwestycja Context Test",
+        "stage_name": "APK",
+        "city": "Gdańsk",
+        "district": "Wrzeszcz",
+        "developer": "Deweloper Pomorze",
+        "notes": "Etap 1",
+        "source_filename": "test.xlsx",
+        "phases_data": {
+            "APK": {
+                "powierzchnia_dzialki": 5000.0,
+                "pum": 3500.0,
+                "suma_pum_i_puu": 3500.0,
+                "pow_calkowita_nadziemia": 5000.0,
+                "ilosc_lokali_mieszkalnych": 60,
+                "raw_parameters": {}
+            }
+        }
+    }
+    save_res = client.post("/api/save-project", json=save_payload)
+    assert save_res.status_code == 200
+    proj_id = save_res.json()["project_id"]
+
+    # Test zapytania o kontekst i podpowiedzi dla wgrywanego nowego etapu (WPK)
+    context_payload = {
+        "project_name": "Inwestycja Context Test",
+        "phases_data": {
+            "WPK": {
+                # Celowo brak powierzchni działki w pliku WPK
+                "pum": 3600.0,
+                "suma_pum_i_puu": 3600.0,
+                "ilosc_lokali_mieszkalnych": 62,
+                "raw_parameters": {}
+            }
+        }
+    }
+    ctx_res = client.post("/api/project-audit-context", json=context_payload)
+    assert ctx_res.status_code == 200
+    ctx_data = ctx_res.json()
+    assert ctx_data["existing_project_found"] is True
+    assert ctx_data["city"] == "Gdańsk"
+    assert ctx_data["developer"] == "Deweloper Pomorze"
+    assert "APK" in ctx_data["existing_phases"]
+    # Podpowiedź brakującej powierzchni działki z etapu APK
+    assert len(ctx_data["field_suggestions"]) >= 1
+    assert ctx_data["field_suggestions"][0]["field"] == "powierzchnia_dzialki"
+    assert ctx_data["field_suggestions"][0]["suggested_value"] == 5000.0
+    # Audyt międzyfazowy WPK z APK z bazy
+    assert len(ctx_data["cross_phase_audit"]) >= 1
+
+    # Cleanup
+    client.delete(f"/api/projects/{proj_id}")

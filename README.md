@@ -9,27 +9,30 @@ Aplikacja stworzona do automatyzacji importu, weryfikacji matematycznej i spójn
 ## Główne Funkcjonalności
 
 1. **Parser Tabel Wskaźników:**
-   - Inteligentne rozpoznawanie faz inwestycji (np. `Koncepcja`, `KU`, `APK`, `WPK`, `Projekt Budowlany (PB)`, `Projekt Wykonawczy (PW)`).
+   - Inteligentne rozpoznawanie etapów i faz inwestycji (np. `Koncepcja`, `APK`, `WPK`, `Projekt Budowlany (PB)`, `Projekt Wykonawczy (PW)`).
+   - Ścisłe wykluczenie kolumn niemających charakteru faz projektowych (`PLANNING requirements`, `KU` / Koncepcja Urbanistyczna).
    - Elastyczne mapowanie etykiet parametrów (powierzchnie działki, zabudowy, utwardzone, biologicznie czynne, PUM/PUU, kubatury, miejsca parkingowe, komórki, wskaźniki intensywności i sprawności).
    - Obsługa plików `.xlsx`, `.xls` oraz `.ods` (Trójmiasto, BemowoVita, A2).
 
 2. **Silnik Audytu Matematycznego i Spójności:**
    - **Cross-check matematyczny:** walidacja bilansu PUM i PUU ($PUMiU == PUM + PUU$), bilansu powierzchni całkowitej ($Pc == Pcn + Pcp$), weryfikacja formuł wskaźników sprawności (nadziemia $PUMiU/Pcn$, całkowitej $PUMiU/Pc$, intensywności $PUMiU/Pd$).
-   - **Audyt biznesowy:** weryfikacja spełnienia wymogu miejsc parkingowych (zaprojektowane vs wymagane MP), średniej powierzchni lokalu ($PUM/im$), wskaźników nasycenia windami i klatkami.
-   - **Audyt międzyfazowy (Cross-Phase):** automatyczne wykrywanie odchyleń PUM, liczby lokali czy miejsc parkingowych między kolejnymi fazami projektu (np. zmiana między APK a Projektem Budowlanym).
+   - **Detekcja sztywnych wskaźników:** wykrywanie wartości wyliczonych stałymi współczynnikami (np. PUM/PCn = 0.700000000000000 lub 0.720000000000000), sugerujących szacunek wskaźnikowy zamiast dokładnego bilansu.
+   - **Wyłączenie walidacji merytorycznych:** spełnienie wymogu miejsc parkingowych (zaprojektowane vs wymagane MP) jest weryfikacją merytoryczną/prawną i nie obciąża audytu matematycznego.
+   - **Audyt międzyfazowy (Cross-Phase):** automatyczne zestawianie wgrywanego pliku z historycznymi etapami z bazy i wykrywanie odchyleń PUM czy liczby mieszkań.
 
-3. **Strefa Buforowa (Staging Area):**
-   - Weryfikacja pliku przed zapisem do bazy – czytelny podgląd wykrytych parametrów i statusów reguł (kolorowanie: zielony `PASS`, żółty `WARNING`, czerwony `FAIL`).
-   - Bezpieczny zapis do bazy dopiero po zatwierdzeniu przez użytkownika.
+3. **Strefa Buforowa (Staging Area) & Autouzupełnianie:**
+   - Weryfikacja pliku przed zapisem do bazy z podglądem parametrów i logów audytu.
+   - Automatyczne podpowiadanie nazwy inwestycji, etapu, lokalizacji i dewelopera na podstawie bazy SQLite oraz podpowiedzi brakujących wartości parametrów (np. powierzchni działki z wcześniejszych etapów).
+   - Dedykowane pole wyboru i nazwania etapu inwestycji (`stage_name`) jako podstawowej jednostki badawczej.
 
 4. **Lokalna Baza Danych SQLite:**
-   - Przechowywanie danych inwestycji, zarejestrowanych faz, kompletnych wskaźników oraz historii logów audytu w jednym pliku `dekapelo.db`.
+   - Przechowywanie danych inwestycji, zarejestrowanych etapów, kompletnych wskaźników oraz historii logów audytu w jednym pliku `dekapelo.db`.
    - Pełna prywatność i praca on-premise (żadne dane wrażliwe nie trafiają do chmury).
 
 5. **Interfejs Użytkownika z Tailwind CSS & Benchmarking BI:**
    - Jednolity, elegancki design z **Tailwind CSS**.
-   - Interaktywne wykresy (Chart.js) porównujące PUM, liczbę mieszkań, sprawności nadziemia i wskaźniki MP dla dowolnie wybranych projektów i faz.
-   - Macierz porównawcza wskaźników w formie tabeli.
+   - Wykresy analityczne (Chart.js): PUM vs lokale, wskaźniki sprawności, a także wykres punktowy relacji **Powierzchnia działki (oś X) vs Chłonność terenu PUMiU/Pd (oś Y)**.
+   - Macierz porównawcza wskaźników w formie tabeli z parametrami powierzchni działki i chłonności.
 
 ---
 

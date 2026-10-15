@@ -127,27 +127,58 @@ class KPIAuditor:
                     actual_value=wsk_mp
                 ))
 
-        # 5. Spełnienie wymogu liczby miejsc parkingowych (zaprojektowane >= wymagane)
-        wymagane_mp = kpi_data.get("wymagana_ilosc_mp")
-        if suma_mp is not None and wymagane_mp is not None:
-            if suma_mp >= wymagane_mp:
-                results.append(AuditResult(
-                    category="LOGIC",
-                    rule_name="Spełnienie Wymogu Miejsc Parkingowych",
-                    status="PASS",
-                    message=f"Zaprojektowano {suma_mp} MP przy wymogu {wymagane_mp} MP (nadwyżka: {suma_mp - wymagane_mp})",
-                    expected_value=float(wymagane_mp),
-                    actual_value=float(suma_mp)
-                ))
-            else:
-                results.append(AuditResult(
-                    category="LOGIC",
-                    rule_name="Spełnienie Wymogu Miejsc Parkingowych",
-                    status="FAIL",
-                    message=f"Niedobór miejsc parkingowych! Zaprojektowano {suma_mp} MP, a wymóg wynosi {wymagane_mp} MP (brak: {wymagane_mp - suma_mp})",
-                    expected_value=float(wymagane_mp),
-                    actual_value=float(suma_mp)
-                ))
+        # 5. Wykrywanie danych obliczonych sztywnymi wskaźnikami (np. PUM wynikający z PCn w stosunku równym np 0.700000000000000 lub 0.720000000000000)
+        # 'Spełnienie Wymogu Miejsc Parkingowych' nie jest walidacją matematyczną tylko merytoryczną i nie powinno być brane pod uwagę przy audycie.
+        candidates_to_check = []
+        if pcn and pcn > 0:
+            if pum is not None and pum > 0:
+                candidates_to_check.append(("PUM", pum, pum / pcn))
+            if pumiu is not None and pumiu > 0 and (pum is None or abs(pumiu - pum) > self.tolerance_surface):
+                candidates_to_check.append(("PUMiU", pumiu, pumiu / pcn))
+
+        rigid_targets = [0.70, 0.72, 0.68, 0.75, 0.80, 0.65]
+        best_match = None
+        for label, val, ratio in candidates_to_check:
+            for rt in rigid_targets:
+                if abs(ratio - rt) < 1e-4 or abs(val - round(pcn * rt, 2)) < 0.05:
+                    best_match = (label, val, ratio, rt)
+                    break
+            if best_match and best_match[3] in (0.70, 0.72):
+                break
+
+        if not best_match:
+            for label, val, ratio in candidates_to_check:
+                if 0.65 <= ratio <= 0.85 and abs(ratio - round(ratio, 2)) < 1e-5:
+                    best_match = (label, val, ratio, round(ratio, 2))
+                    break
+
+        detected_rigid = False
+        if best_match:
+            label, val, ratio, matched_rt = best_match
+            detected_rigid = True
+            results.append(AuditResult(
+                category="LOGIC",
+                rule_name="Wykrycie Sztywnego Wskaźnika PUM/PCn",
+                status="WARNING",
+                message=f"Wykryto dane obliczone sztywnym wskaźnikiem: {label}/PCn = {ratio:.6f} (~{matched_rt:.2f}). {label} ({val:.2f} m²) wynika bezpośrednio z PCn ({pcn:.2f} m²) za pomocą sztywnego przelicznika, co sugeruje szacunek zamiast rzeczywistego bilansu.",
+                expected_value=None,
+                actual_value=round(ratio, 4)
+            ))
+
+        if not detected_rigid:
+            wsk_raw = kpi_data.get("wskaznik_pumiu_pcn")
+            if wsk_raw is not None and 0.50 <= wsk_raw <= 0.90:
+                for rt in [0.70, 0.72]:
+                    if abs(wsk_raw - rt) < 1e-4:
+                        results.append(AuditResult(
+                            category="LOGIC",
+                            rule_name="Wykrycie Sztywnego Wskaźnika PUM/PCn",
+                            status="WARNING",
+                            message=f"Wykryto sztywny wskaźnik sprawności nadziemia w arkuszu: {wsk_raw:.6f} (~{rt:.2f}), co wskazuje na przyjęcie wartości szacunkowej zamiast rzeczywistego bilansu.",
+                            expected_value=None,
+                            actual_value=round(wsk_raw, 4)
+                        ))
+                        break
 
         # 6. Wskaźnik Sprawności Nadziemia (PUMiU / Pcn)
         wsk_pcn = kpi_data.get("wskaznik_pumiu_pcn")

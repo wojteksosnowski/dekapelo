@@ -42,6 +42,7 @@ def test_auditor_pc_balance():
 
 
 def test_auditor_parking_deficit():
+    # Spełnienie Wymogu Miejsc Parkingowych nie jest walidacją matematyczną tylko merytoryczną i nie jest brane pod uwagę przy audycie
     auditor = KPIAuditor()
     kpi_data = {
         "suma_miejsc_parkingowych": 50,
@@ -49,8 +50,69 @@ def test_auditor_parking_deficit():
     }
     results = auditor.audit_phase(kpi_data)
     mp_res = [r for r in results if "Wymogu Miejsc Parkingowych" in r.rule_name]
-    assert len(mp_res) == 1
-    assert mp_res[0].status == "FAIL"
+    assert len(mp_res) == 0, "Spełnienie wymogu MP nie powinno być w audycie"
+
+
+def test_auditor_rigid_ratio_detection_0_70():
+    auditor = KPIAuditor()
+    kpi_data = {
+        "pow_calkowita_nadziemia": 1000.0,
+        "pum": 700.0  # Dokładnie 0.700000000000000
+    }
+    results = auditor.audit_phase(kpi_data)
+    rigid_res = [r for r in results if "Sztywnego Wskaźnika" in r.rule_name]
+    assert len(rigid_res) == 1
+    assert rigid_res[0].status == "WARNING"
+    assert "0.70" in rigid_res[0].message
+
+
+def test_auditor_rigid_ratio_detection_0_72():
+    auditor = KPIAuditor()
+    kpi_data = {
+        "pow_calkowita_nadziemia": 5000.0,
+        "pum": 3600.0  # Dokładnie 0.720000000000000 (3600 / 5000 = 0.72)
+    }
+    results = auditor.audit_phase(kpi_data)
+    rigid_res = [r for r in results if "Sztywnego Wskaźnika" in r.rule_name]
+    assert len(rigid_res) == 1
+    assert rigid_res[0].status == "WARNING"
+    assert "0.72" in rigid_res[0].message
+
+
+def test_auditor_non_rigid_ratio():
+    auditor = KPIAuditor()
+    kpi_data = {
+        "pow_calkowita_nadziemia": 5000.0,
+        "pum": 3567.89  # Rzeczywisty bilans architektoniczny (0.713578)
+    }
+    results = auditor.audit_phase(kpi_data)
+    rigid_res = [r for r in results if "Sztywnego Wskaźnika" in r.rule_name]
+    assert len(rigid_res) == 0
+
+
+def test_auditor_rigid_ratio_detection_pumiu():
+    auditor = KPIAuditor()
+    kpi_data = {
+        "pow_calkowita_nadziemia": 5000.0,
+        "pum": 3000.0,
+        "puu": 500.0,
+        "suma_pum_i_puu": 3500.0  # 3500 / 5000 = 0.700000000000000
+    }
+    results = auditor.audit_phase(kpi_data)
+    rigid_res = [r for r in results if "Sztywnego Wskaźnika" in r.rule_name]
+    assert len(rigid_res) == 1
+    assert "0.70" in rigid_res[0].message
+
+
+def test_auditor_rigid_ratio_from_raw_indicator():
+    auditor = KPIAuditor()
+    kpi_data = {
+        "wskaznik_pumiu_pcn": 0.700000000000000
+    }
+    results = auditor.audit_phase(kpi_data)
+    rigid_res = [r for r in results if "Sztywnego Wskaźnika" in r.rule_name]
+    assert len(rigid_res) == 1
+    assert "0.70" in rigid_res[0].message
 
 
 def test_cross_phase_audit():
