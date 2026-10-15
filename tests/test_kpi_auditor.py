@@ -192,3 +192,44 @@ def test_auditor_wskaznik_pcnb_ratio():
     assert len(wsk_res) == 1
     assert wsk_res[0].status == "PASS"
 
+
+def test_cross_phase_audit_skips_different_stages():
+    """Weryfikuje, że audyt międzyfazowy nie porównuje odrębnych etapów inwestycji (np. Etap 1 vs Etap 2)."""
+    auditor = KPIAuditor()
+    phases_data = {
+        "Etap 1 (PW)": {"stage_name": "Etap 1", "phase_name": "PW", "pum": 3000.0, "ilosc_lokali_mieszkalnych": 40},
+        "Etap 2 (PB)": {"stage_name": "Etap 2", "phase_name": "PB", "pum": 1500.0, "ilosc_lokali_mieszkalnych": 20}
+    }
+    results = auditor.audit_cross_phases(phases_data)
+    # Różne etapy NIE mogą wywołać fałszywego ostrzeżenia o drastycznym spadku PUM
+    assert len(results) == 0
+
+
+def test_auditor_plot_dedicated_vs_shared():
+    """Weryfikuje obsługę działki własnej etapu vs etapu realizowanego na części działki inwestycji."""
+    auditor = KPIAuditor()
+
+    # 1. Etap z własną działką
+    kpi_wlasna = {
+        "powierzchnia_dzialki": 2000.0,
+        "suma_pum_i_puu": 3000.0,
+        "wskaznik_pumiu_pd": 1.5,
+        "plot_type": "wlasna"
+    }
+    res_wlasna = auditor.audit_phase(kpi_wlasna)
+    chlonnosc_res = [r for r in res_wlasna if "Chłonności Działki" in r.rule_name]
+    assert len(chlonnosc_res) == 1
+    assert chlonnosc_res[0].status == "PASS"
+
+    # 2. Etap na części działki inwestycji (brak dedykowanej działki etapu)
+    kpi_czesc = {
+        "powierzchnia_dzialki": None,
+        "suma_pum_i_puu": 1500.0,
+        "plot_type": "czesc_dzialki"
+    }
+    res_czesc = auditor.audit_phase(kpi_czesc)
+    dzialka_res = [r for r in res_czesc if "Działka Inwestycji i Etapu" in r.rule_name]
+    assert len(dzialka_res) == 1
+    assert dzialka_res[0].status == "PASS"
+    assert "części działki" in dzialka_res[0].message
+

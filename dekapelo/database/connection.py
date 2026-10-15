@@ -40,6 +40,20 @@ def init_db(engine_override=None):
                 if "pum_pnb" not in existing_cols:
                     conn.execute(text("ALTER TABLE project_kpi ADD COLUMN pum_pnb FLOAT"))
                 conn.commit()
+        if "investment_projects" in inspector.get_table_names():
+            existing_proj_cols = {col["name"] for col in inspector.get_columns("investment_projects")}
+            with target_engine.connect() as conn:
+                if "powierzchnia_dzialki" not in existing_proj_cols:
+                    conn.execute(text("ALTER TABLE investment_projects ADD COLUMN powierzchnia_dzialki FLOAT"))
+                conn.commit()
+        if "project_phases" in inspector.get_table_names():
+            existing_phase_cols = {col["name"] for col in inspector.get_columns("project_phases")}
+            with target_engine.connect() as conn:
+                if "stage_name" not in existing_phase_cols:
+                    conn.execute(text("ALTER TABLE project_phases ADD COLUMN stage_name VARCHAR(100)"))
+                if "plot_type" not in existing_phase_cols:
+                    conn.execute(text("ALTER TABLE project_phases ADD COLUMN plot_type VARCHAR(50) DEFAULT 'nieokreslona'"))
+                conn.commit()
     except Exception:
         pass
 

@@ -66,10 +66,12 @@ def test_suggestions_api(client):
     data = res.json()
     assert "projects" in data
     assert "stages" in data
+    assert "phases" in data
     assert "cities" in data
     assert "districts" in data
     assert "developers" in data
     assert "APK" in data["stages"]
+    assert "APK" in data["phases"]
     assert "Projekt Budowlany" in data["stages"]
 
 
@@ -173,3 +175,88 @@ def test_project_audit_context_api(client):
 
     # Cleanup
     client.delete(f"/api/projects/{proj_id}")
+
+
+def test_tabs_dom_structure(client):
+    """Weryfikuje poprawność drzewa DOM - zakładki nie mogą być w sobie zagnieżdżone."""
+    response = client.get("/")
+    assert response.status_code == 200
+    html = response.text
+
+    # Sprawdzenie obecności wszystkich trzech zakładek
+    assert 'id="import-tab"' in html
+    assert 'id="catalog-tab"' in html
+    assert 'id="bi-tab"' in html
+
+    # Weryfikacja, że sekcje nie są zagnieżdżone
+    import_pos = html.find('id="import-tab"')
+    catalog_pos = html.find('id="catalog-tab"')
+    bi_pos = html.find('id="bi-tab"')
+
+    assert import_pos < catalog_pos < bi_pos
+
+    # Pomiędzy import-tab a catalog-tab musi znajdować się tag zamykający </section>
+    between_import_and_catalog = html[import_pos:catalog_pos]
+    assert "</section>" in between_import_and_catalog
+
+    # Pomiędzy catalog-tab a bi-tab musi znajdować się tag zamykający </section>
+    between_catalog_and_bi = html[catalog_pos:bi_pos]
+    assert "</section>" in between_catalog_and_bi
+
+    # Po bi-tab musi znajdować się tag zamykający </section>
+    after_bi = html[bi_pos:]
+    assert "</section>" in after_bi
+
+
+def test_delete_stage_api(client):
+    """Test usuwania pojedynczego etapu inwestycji z bazy."""
+    payload = {
+        "project_name": "Test Two Stages Project",
+        "city": "Wrocław",
+        "source_filename": "test.xlsx",
+        "phases_data": {
+            "ETAP 1": {
+                "stage_name": "ETAP 1",
+                "phase_name": "PB",
+                "pum": 2500.0,
+                "powierzchnia_dzialki": 3000.0,
+                "ilosc_lokali_mieszkalnych": 40
+            },
+            "ETAP 2": {
+                "stage_name": "ETAP 2",
+                "phase_name": "PW",
+                "pum": 3000.0,
+                "powierzchnia_dzialki": 3500.0,
+                "ilosc_lokali_mieszkalnych": 50
+            }
+        }
+    }
+    save_res = client.post("/api/save-project", json=payload)
+    assert save_res.status_code == 200
+    proj_id = save_res.json()["project_id"]
+
+    # Pobieramy etapy
+    projects = client.get("/api/projects").json()
+    proj = next(p for p in projects if p["project_id"] == proj_id)
+    assert len(proj["phases"]) == 2
+    stage1_id = proj["phases"][0]["phase_id"]
+    stage2_id = proj["phases"][1]["phase_id"]
+
+    # Usuwamy tylko pierwszy etap
+    del_res = client.delete(f"/api/stages/{stage1_id}")
+    assert del_res.status_code == 200
+    assert del_res.json()["status"] == "OK"
+
+    # Sprawdzamy czy projekt ma teraz 1 etap
+    projects = client.get("/api/projects").json()
+    proj = next(p for p in projects if p["project_id"] == proj_id)
+    assert len(proj["phases"]) == 1
+    assert proj["phases"][0]["phase_id"] == stage2_id
+
+    # Usuwamy drugi etap - projekt powinien zostać automatycznie usunięty
+    del_res2 = client.delete(f"/api/stages/{stage2_id}")
+    assert del_res2.status_code == 200
+
+    projects = client.get("/api/projects").json()
+    assert not any(p["project_id"] == proj_id for p in projects)
+

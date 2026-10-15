@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import Optional
 from sqlalchemy import Column, Integer, Float, String, DateTime, Text, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from dekapelo.database.connection import Base
@@ -8,8 +9,35 @@ def utc_now():
     return datetime.now(timezone.utc)
 
 
+PHASE_HIERARCHY = {
+    "APK": 1,
+    "KONCEPCJA": 1,
+    "WPK": 2,
+    "PB": 3,
+    "PROJEKT BUDOWLANY": 3,
+    "PW": 4,
+    "PROJEKT WYKONAWCZY": 4
+}
+
+
+def get_phase_rank(phase_name: Optional[str]) -> int:
+    """Zwraca rangę fazy w hierarchii projektowej: APK (1) < WPK (2) < PB (3) < PW (4)."""
+    if not phase_name:
+        return 0
+    p = str(phase_name).strip().upper()
+    if "PW" in p or "WYKONAWCZY" in p:
+        return 4
+    if "PB" in p or "BUDOWLANY" in p:
+        return 3
+    if "WPK" in p:
+        return 2
+    if "APK" in p or "KONCEPCJA" in p:
+        return 1
+    return 0
+
+
 class InvestmentProject(Base):
-    """Główna encja projektu / inwestycji deweloperskiej."""
+    """Główna encja projektu / całości zamierzenia inwestycyjnego."""
     __tablename__ = "investment_projects"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -17,21 +45,42 @@ class InvestmentProject(Base):
     city = Column(String(100), nullable=True)
     district = Column(String(100), nullable=True)
     developer = Column(String(255), nullable=True)
+    powierzchnia_dzialki = Column(Float, nullable=True)  # Łączna powierzchnia działek całej inwestycji
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=utc_now)
 
     phases = relationship("ProjectPhase", back_populates="project", cascade="all, delete-orphan")
 
+    @property
+    def leading_phases(self) -> list:
+        """Zwraca dla każdego unikalnego etapu inwestycji wyłącznie fazę najwyżej w hierarchii (APK < WPK < PB < PW)."""
+        stages_map = {}
+        for ph in self.phases:
+            key = (ph.stage_name or ph.phase_name).strip().lower()
+            if key not in stages_map:
+                stages_map[key] = ph
+            else:
+                existing = stages_map[key]
+                if ph.phase_rank > existing.phase_rank:
+                    stages_map[key] = ph
+                elif ph.phase_rank == existing.phase_rank and (ph.id or 0) > (existing.id or 0):
+                    stages_map[key] = ph
+        return list(stages_map.values())
+
 
 class ProjectPhase(Base):
-    """Etap projektowy danej inwestycji (np. Koncepcja, APK, WPK, Projekt Budowlany, PW).
-    Podstawowa jednostka pomiarowa i analityczna w systemie.
+    """Etap Inwestycji w określonej Fazie Projektowej.
+    Podstawowa jednostka pomiarowa i analityczna w systemie KPI.
+    - Etap inwestycji (stage_name): część inwestycji realizowana osobno (np. 'Etap 1', 'Teren 10', 'Całość')
+    - Faza projektowa (phase_name): stopień zaawansowania dokumentacji (np. 'APK', 'WPK', 'PB', 'PW')
     """
     __tablename__ = "project_phases"
 
     id = Column(Integer, primary_key=True, index=True)
     project_id = Column(Integer, ForeignKey("investment_projects.id"), nullable=False)
-    phase_name = Column(String(100), nullable=False)  # np. 'APK', 'WPK', 'PB', 'PW', 'Koncepcja', 'Bazowy'
+    _stage_name = Column("stage_name", String(100), nullable=True)  # np. 'Etap 1', 'Etap 2', 'Teren 10', 'Całość'
+    phase_name = Column(String(100), nullable=False)  # Faza projektowa: 'APK', 'WPK', 'PB', 'PW', 'Koncepcja'
+    plot_type = Column(String(50), default="nieokreslona", nullable=True)  # 'wlasna', 'czesc_dzialki', 'nieokreslona'
     source_file = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=utc_now)
 
@@ -46,11 +95,44 @@ class ProjectPhase(Base):
 
     @property
     def stage_name(self) -> str:
-        """Nazwa etapu projektowego (np. APK, WPK, PB)."""
-        return self.phase_name
+        """Nazwa etapu inwestycji (np. 'Etap 1', 'Teren 10', lub domyślnie 'Całość' / phase_name)."""
+        return self._stage_name if self._stage_name else (self.phase_name or "Całość")
+
+    @stage_name.setter
+    def stage_name(self, value: Optional[str]):
+        self._stage_name = value
+
+    @property
+    def display_name(self) -> str:
+        """Czytelna nazwa etapu z fazą projektową (np. 'ETAP 2 (PW)' lub 'Całość (PB)')."""
+        st = self.stage_name
+        if st and self.phase_name and st.strip().lower() != self.phase_name.strip().lower():
+            return f"{st} ({self.phase_name})"
+        return st or self.phase_name or "Całość"
+
+    @property
+    def phase_rank(self) -> int:
+        """Ranga fazy w hierarchii APK (1) < WPK (2) < PB (3) < PW (4)."""
+        return get_phase_rank(self.phase_name)
+
+    @property
+    def is_leading(self) -> bool:
+        """Czy ta faza jest najwyżej w hierarchii dla swojego etapu w ramach inwestycji."""
+        if not self.project:
+            return True
+        my_key = (self.stage_name or self.phase_name).strip().lower()
+        for sibling in self.project.phases:
+            if sibling.id != self.id:
+                s_key = (sibling.stage_name or sibling.phase_name).strip().lower()
+                if s_key == my_key:
+                    if sibling.phase_rank > self.phase_rank:
+                        return False
+                    elif sibling.phase_rank == self.phase_rank and (sibling.id or 0) > (self.id or 0):
+                        return False
+        return True
 
 
-# Aliasy domenowe: Podstawową jednostką badaną jest 'Etap' (InvestmentStage)
+# Aliasy domenowe: Podstawową jednostką badaną jest 'Etap' (InvestmentStage) w określonej fazie
 InvestmentStage = ProjectPhase
 
 

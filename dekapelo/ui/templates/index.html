@@ -71,57 +71,191 @@
     <div id="toast" class="hidden mb-6 p-4 rounded-lg shadow-md transition-all duration-300"></div>
 
     <!-- ZAKŁADKA 1: IMPORT I AUDYT -->
-    <section id="import-tab" class="tab-content block">
-    <!-- ZAKŁADKA 1: IMPORT I AUDYT (PEŁNA SZEROKOŚĆ) -->
     <section id="import-tab" class="tab-content block space-y-6">
       
-      <!-- KROK 1: WCZYTAJ PLIK (FULL WIDTH) -->
-      <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-        <div class="flex flex-wrap justify-between items-center mb-4 gap-2">
+      <!-- KROK 1: WCZYTAJ PLIK LUB KATALOG (FULL WIDTH) -->
+      <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex flex-wrap justify-between items-center gap-2">
           <div>
             <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
               <span class="w-6 h-6 rounded-full bg-emerald-600 text-white text-xs font-bold flex items-center justify-center">1</span>
-              Wczytaj Plik Inwestycji
+              Wczytaj Plik lub Cały Katalog Inwestycji
             </h2>
-            <p class="text-xs text-slate-500 mt-0.5 ml-8">Wybierz lub przeciągnij plik Excel (.xlsx, .xls) lub arkusz ODS z tabelą parametrów i wskaźników inwestycji.</p>
+            <p class="text-xs text-slate-500 mt-0.5 ml-8">Możesz wczytać pojedynczy plik, zaznaczyć wiele plików lub zaimportować cały katalog z plikami Excel (.xlsx, .xls) / ODS.</p>
           </div>
-          <div id="file-info" class="hidden flex items-center gap-3 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg">
+          <div id="file-info" class="hidden flex items-center gap-2.5 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg flex-wrap">
+            <span id="file-directory-badge" class="hidden px-2 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800 border border-teal-200 font-mono"></span>
             <span class="text-xs font-bold text-emerald-900" id="file-name"></span>
             <span class="text-[11px] text-emerald-700 font-medium" id="file-size"></span>
             <button type="button" onclick="document.getElementById('file-input').click()" class="text-xs text-emerald-700 hover:text-emerald-900 font-semibold underline ml-2">Zmień plik</button>
           </div>
         </div>
+
+        <!-- Przyciski wyboru źródła / trybu importu -->
+        <div class="flex flex-wrap items-center gap-2 text-xs">
+          <button type="button" onclick="document.getElementById('file-input').click()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold rounded-lg border border-slate-200 transition flex items-center gap-1.5 shadow-2xs">
+            <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+            Pojedynczy plik
+          </button>
+          <button type="button" onclick="document.getElementById('folder-input').click()" class="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-semibold rounded-lg border border-emerald-300 transition flex items-center gap-1.5 shadow-2xs">
+            <svg class="w-4 h-4 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+            Cały folder z dysku
+          </button>
+          <button type="button" onclick="document.getElementById('batch-files-input').click()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold rounded-lg border border-slate-200 transition flex items-center gap-1.5 shadow-2xs">
+            <svg class="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            Wiele plików naraz
+          </button>
+          <button type="button" onclick="loadServerFolder('KPI - WSKAZNIKI')" class="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-lg transition flex items-center gap-1.5 shadow-2xs ml-auto">
+            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7z"></path></svg>
+            Wczytaj z repozytorium: KPI - WSKAZNIKI
+          </button>
+        </div>
         
+        <!-- Ukryte inputy do plików i folderów -->
+        <input type="file" id="file-input" class="hidden" accept=".xlsx,.xls,.ods" onchange="if(this.files && this.files.length > 0) handleFileSelect(this.files[0])">
+        <input type="file" id="folder-input" class="hidden" webkitdirectory directory multiple onchange="if(this.files && this.files.length > 0) handleFolderSelect(this.files)">
+        <input type="file" id="batch-files-input" class="hidden" multiple accept=".xlsx,.xls,.ods" onchange="if(this.files && this.files.length > 0) handleFolderSelect(this.files)">
+
         <div id="drop-zone" class="border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-xl p-8 text-center cursor-pointer transition bg-slate-50/50 hover:bg-emerald-50/30">
           <svg class="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
             <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
-          <div class="mt-2 text-sm font-semibold text-slate-700">Wybierz lub przeciągnij plik ze wskaźnikami</div>
+          <div class="mt-2 text-sm font-semibold text-slate-700">Wybierz lub przeciągnij plik, wiele plików lub cały folder</div>
           <p class="text-xs text-slate-500 mt-1">Obsługiwane formaty: .xlsx, .xls, .ods</p>
-          <input type="file" id="file-input" class="hidden" accept=".xlsx,.xls,.ods" onchange="handleFileSelect(this.files[0])">
         </div>
       </div>
 
-      <!-- KROK 2: DANE INWESTYCJI I ETAPU (FULL WIDTH GRID) -->
+      <!-- PASEK KOLEJKI IMPORTU WSADOWEGO (BATCH QUEUE BANNER) -->
+      <div id="batch-queue-banner" class="hidden bg-slate-900 text-white p-5 rounded-xl border border-slate-800 shadow-lg space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <span class="w-8 h-8 rounded-full bg-emerald-500 text-white font-bold flex items-center justify-center text-sm shadow">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+            </span>
+            <div>
+              <h3 class="text-sm font-bold flex flex-wrap items-center gap-2">
+                Kolejka Importu Folderu:
+                <span id="queue-current-directory-badge" class="hidden px-2 py-0.5 rounded text-[10px] font-bold bg-teal-950 text-teal-300 border border-teal-800 font-mono"></span>
+                <span id="queue-current-file-name" class="text-emerald-400 font-mono text-xs font-semibold">plik.xlsx</span>
+              </h3>
+              <p class="text-xs text-slate-400" id="queue-step-label">Przetwarzanie pliku 1 z 12</p>
+            </div>
+          </div>
+          <!-- Liczniki na żywo -->
+          <div class="flex items-center gap-2">
+            <span class="px-3 py-1 rounded-lg text-xs font-bold bg-emerald-950 text-emerald-300 border border-emerald-800 flex items-center gap-1.5 shadow-2xs">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              Zatwierdzone: <strong id="queue-approved-count" class="text-emerald-200">0</strong>
+            </span>
+            <span class="px-3 py-1 rounded-lg text-xs font-bold bg-rose-950 text-rose-300 border border-rose-800 flex items-center gap-1.5 shadow-2xs">
+              <span class="w-2 h-2 rounded-full bg-rose-400"></span>
+              Odrzucone: <strong id="queue-rejected-count" class="text-rose-200">0</strong>
+            </span>
+            <span class="px-3 py-1 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-1.5 shadow-2xs">
+              Pozostało: <strong id="queue-remaining-count" class="text-white">0</strong>
+            </span>
+          </div>
+        </div>
+
+        <!-- Pasek postępu -->
+        <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
+          <div id="queue-progress-bar" class="bg-gradient-to-r from-emerald-500 to-teal-400 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+
+        <!-- Przyciski sterowania kolejki -->
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-800 text-xs">
+          <div class="text-slate-400">
+            Zweryfikuj parametry poniżej i zatwierdź (zapis od razu w SQLite) lub odrzuć plik.
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="rejectCurrentBatchFile()" class="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 hover:text-rose-200 border border-rose-500/40 rounded-lg font-semibold transition flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+              Odrzuć ten plik (pomiń)
+            </button>
+            <button type="button" onclick="autoApproveRemainingBatch()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 rounded-lg font-semibold transition flex items-center gap-1.5" title="Zatwierdź pozostałe pliki wg domyślnych wskaźników">
+              <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+              Zatwierdź pozostałe automatycznie
+            </button>
+            <button type="button" onclick="cancelBatchQueue()" class="px-2.5 py-1.5 text-slate-400 hover:text-slate-200 transition">
+              Zakończ kolejkę
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL WYBORU ETAPÓW (WIELOETAPOWOŚĆ) -->
+      <div id="multistage-panel" class="hidden bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex flex-wrap items-center justify-between border-b border-slate-100 pb-3 gap-2">
+          <div class="flex items-center gap-2">
+            <input type="checkbox" id="multistage-toggle" onchange="toggleMultistageMode(this.checked)" class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500">
+            <label for="multistage-toggle" class="text-sm font-bold text-slate-900 cursor-pointer flex items-center gap-2">
+              Plik wieloetapowy
+              <span id="multistage-badge" class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">Wykryto etapy</span>
+            </label>
+          </div>
+          <div class="flex items-center gap-2 text-xs">
+            <span class="text-slate-500 font-medium">Szybki wybór:</span>
+            <button type="button" onclick="selectAllStages(true)" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded font-semibold text-slate-700 transition">Zaznacz wszystkie</button>
+            <button type="button" onclick="selectAllStages(false)" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded font-semibold text-slate-700 transition">Odznacz wszystkie</button>
+            <button type="button" onclick="selectStagesWithDataOnly()" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded font-semibold border border-emerald-200 transition">Tylko z danymi</button>
+          </div>
+        </div>
+
+        <p class="text-xs text-slate-500">Wykryto etapy inwestycji w pliku. Zaznacz etapy, które chcesz zaimportować do bazy lub odznacz niepotrzebne:</p>
+
+        <!-- TABELA WYBORU ETAPÓW -->
+        <div class="overflow-x-auto border border-slate-200 rounded-lg">
+          <table class="min-w-full divide-y divide-slate-200 text-xs text-left">
+            <thead class="bg-slate-50 font-semibold text-slate-600">
+              <tr>
+                <th class="py-2.5 px-3 w-12 text-center">Import</th>
+                <th class="py-2.5 px-3">Nazwa Etapu</th>
+                <th class="py-2.5 px-3">Faza Projektu</th>
+                <th class="py-2.5 px-3">Arkusz</th>
+                <th class="py-2.5 px-3 text-right">PUM (m²)</th>
+                <th class="py-2.5 px-3 text-right">Działka (m²)</th>
+                <th class="py-2.5 px-3 text-right">Lokale</th>
+                <th class="py-2.5 px-3 text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody id="multistage-table-body" class="divide-y divide-slate-100 text-slate-800 bg-white">
+              <!-- generowane dynamicznie -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- KROK 2: DANE INWESTYCJI, ETAPU I FAZY (FULL WIDTH GRID) -->
       <div id="project-meta-card" class="hidden bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
           <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
             <span class="w-6 h-6 rounded-full bg-emerald-600 text-white text-xs font-bold flex items-center justify-center">2</span>
-            Dane Inwestycji i Etapu Projektowego
+            Dane Inwestycji, Etapu i Fazy Projektowej
           </h2>
-          <span class="text-xs text-slate-400">Podstawowa jednostka badawcza: Etap powiązany z Inwestycją</span>
+          <span class="text-xs text-slate-400">Podstawowa jednostka pomiarowa: Etap Inwestycji w określonej Fazie Projektowej (np. Etap 2 [PW])</span>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
           <div>
             <label class="block text-xs font-bold text-slate-700 mb-1">Nazwa Inwestycji *</label>
-            <input type="text" id="project-name-input" list="projects-datalist" oninput="onProjectNameInput(this.value)" placeholder="np. Dąbka Vita, Morska Vita" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white">
+            <input type="text" id="project-name-input" list="projects-datalist" oninput="onProjectNameInput(this.value)" placeholder="np. Morska Vita, Dąbka Vita" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white">
             <datalist id="projects-datalist"></datalist>
           </div>
           <div>
             <label class="block text-xs font-bold text-slate-700 mb-1">Etap Inwestycji *</label>
-            <input type="text" id="stage-name-input" list="stages-datalist" placeholder="np. APK, WPK, Projekt Budowlany, PW" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white">
+            <input type="text" id="stage-name-input" list="stages-datalist" placeholder="np. Etap 1, Teren 10, Całość" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white">
             <datalist id="stages-datalist"></datalist>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Faza Projektowa *</label>
+            <input type="text" id="phase-name-input" list="phases-datalist" placeholder="np. PB, PW, APK, WPK" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white">
+            <datalist id="phases-datalist">
+              <option value="APK"></option>
+              <option value="WPK"></option>
+              <option value="PB"></option>
+              <option value="PW"></option>
+              <option value="Koncepcja"></option>
+            </datalist>
           </div>
           <div>
             <label class="block text-xs font-bold text-slate-700 mb-1">Miasto i Dzielnica</label>
@@ -133,15 +267,27 @@
             <datalist id="districts-datalist"></datalist>
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">Deweloper / Spółka celowa</label>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Deweloper</label>
             <input type="text" id="developer-input" list="developers-datalist" placeholder="np. Develia" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
             <datalist id="developers-datalist"></datalist>
           </div>
         </div>
 
         <div>
-          <label class="block text-xs font-medium text-slate-700 mb-1">Notatki / Uwagi</label>
-          <input type="text" id="notes-input" placeholder="Opcjonalne uwagi lub założenia do etapu..." class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+          <label class="block text-xs font-medium text-slate-700 mb-1">Notatki / Założenia do Działki i Etapu</label>
+          <input type="text" id="notes-input" placeholder="Opcjonalne uwagi (np. etap na części działki inwestycji, założenia MP)..." class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+        </div>
+
+        <!-- PODSUMOWANIE WYKRYTYCH ETAPÓW I FAZ W PLIKU -->
+        <div id="detected-stages-summary-box" class="hidden pt-3 border-t border-slate-100 space-y-2">
+          <div class="text-xs font-bold text-slate-800 flex items-center justify-between">
+            <span class="flex items-center gap-1.5">
+              <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+              Wykryte etapy i fazy projektowe w pliku:
+            </span>
+            <span id="detected-stages-count-badge" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">0 pozycji</span>
+          </div>
+          <div id="detected-stages-chips" class="flex flex-wrap gap-2"></div>
         </div>
 
         <div id="db-suggestions-box" class="hidden bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-xs space-y-1.5">
@@ -179,10 +325,29 @@
               <span id="badge-warn" class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">0 Ostrzeżeń</span>
               <span id="badge-fail" class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800">0 Błędów</span>
             </div>
-            <button onclick="saveStagingProject()" class="py-2 px-5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm rounded-lg shadow transition flex items-center gap-2">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-              Zatwierdź i Zapisz w Bazie SQLite
+            <button type="button" id="batch-top-reject-btn" onclick="rejectCurrentBatchFile()" class="hidden py-2 px-4 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-sm rounded-lg border border-rose-300 transition flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+              Odrzuć ten plik (pomiń)
             </button>
+            <button id="save-project-btn-top" onclick="saveStagingProject()" class="py-2 px-5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm rounded-lg shadow transition flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+              <span id="save-project-text-top">Zatwierdź i Zapisz w Bazie SQLite</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Baner powtórzonego pliku / nowych faz projektowych -->
+        <div id="reimport-banner" class="hidden rounded-xl p-4 border transition-all">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex items-start gap-3">
+              <div id="reimport-banner-icon" class="mt-0.5 shrink-0"></div>
+              <div>
+                <h4 id="reimport-banner-title" class="text-sm font-bold"></h4>
+                <p id="reimport-banner-message" class="text-xs mt-0.5"></p>
+                <div id="reimport-banner-details" class="mt-2 space-y-1"></div>
+              </div>
+            </div>
+            <div id="reimport-banner-actions" class="shrink-0 flex items-center gap-2"></div>
           </div>
         </div>
 
@@ -190,41 +355,56 @@
         <div id="phases-container" class="space-y-6"></div>
 
         <!-- Dolny przycisk zapisu -->
-        <div class="flex justify-end pt-2">
-          <button onclick="saveStagingProject()" class="py-2.5 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm rounded-lg shadow transition flex items-center gap-2">
+        <div class="flex items-center justify-end gap-3 pt-2">
+          <button type="button" id="batch-bottom-reject-btn" onclick="rejectCurrentBatchFile()" class="hidden py-2.5 px-5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-sm rounded-lg border border-rose-300 transition flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            Odrzuć ten plik (pomiń)
+          </button>
+          <button id="save-project-btn-bottom" onclick="saveStagingProject()" class="py-2.5 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm rounded-lg shadow transition flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-            Zatwierdź i Zapisz Etap w Bazie SQLite
+            <span id="save-project-text-bottom">Zatwierdź i Zapisz Etap w Bazie SQLite</span>
           </button>
         </div>
       </div>
 
     </section>
 
-    <!-- ZAKŁADKA 2: KATALOG INWESTYCJI -->
-    <section id="catalog-tab" class="tab-content hidden">
+    <!-- ZAKŁADKA 2: KATALOG INWESTYCJI I ETAPÓW -->
+    <section id="catalog-tab" class="tab-content hidden space-y-4">
       <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <div class="p-6 border-b border-slate-200 flex flex-wrap justify-between items-center gap-4">
           <div>
-            <h2 class="text-lg font-bold text-slate-900">Baza Zapisanych Inwestycji</h2>
-            <p class="text-xs text-slate-500">Zestawienie projektów i zarejestrowanych faz w lokalnej bazie SQLite.</p>
+            <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+              Baza Inwestycji i Etapów Projektowych
+              <span id="catalog-stats-badge" class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800"></span>
+            </h2>
+            <p class="text-xs text-slate-500 mt-0.5">Podstawowa jednostka badawcza: <strong>Etap Inwestycji</strong>. Rozwiń inwestycję, aby zobaczyć szczegóły poszczególnych etapów.</p>
           </div>
-          <button onclick="loadProjectsCatalog()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg transition">
-            Odśwież Listę
-          </button>
+          <div class="flex items-center gap-2">
+            <button onclick="toggleAllAccordions(true)" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition">
+              Rozwiń wszystkie etapy
+            </button>
+            <button onclick="toggleAllAccordions(false)" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition">
+              Zwiń wszystkie
+            </button>
+            <button onclick="loadProjectsCatalog()" class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-semibold rounded-lg transition flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+              Odśwież
+            </button>
+          </div>
         </div>
 
         <div class="overflow-x-auto">
           <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
             <thead class="bg-slate-50 text-xs font-semibold text-slate-600 uppercase tracking-wider">
               <tr>
-                <th class="px-6 py-3">Inwestycja</th>
-                <th class="px-6 py-3">Miasto / Dzielnica</th>
-                <th class="px-6 py-3">Fazy w Bazie</th>
-                <th class="px-6 py-3">PUM (m²)</th>
-                <th class="px-6 py-3">Lokale</th>
-                <th class="px-6 py-3">Wskaźnik MP</th>
-                <th class="px-6 py-3">Sprawność Nadziemia</th>
-                <th class="px-6 py-3 text-right">Akcje</th>
+                <th class="w-10 px-4 py-3 text-center"></th>
+                <th class="px-4 py-3">Inwestycja</th>
+                <th class="px-4 py-3">Lokalizacja</th>
+                <th class="px-4 py-3 text-center">Zarejestrowane Etapy</th>
+                <th class="px-4 py-3 text-right">PUM Łącznie (m²)</th>
+                <th class="px-4 py-3 text-right">Lokale Łącznie</th>
+                <th class="px-4 py-3 text-right">Akcje</th>
               </tr>
             </thead>
             <tbody id="projects-table-body" class="divide-y divide-slate-100 text-slate-800">
@@ -238,14 +418,23 @@
     <!-- ZAKŁADKA 3: BENCHMARKING BI -->
     <section id="bi-tab" class="tab-content hidden space-y-6">
       <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-        <h2 class="text-lg font-bold text-slate-900 mb-1">Porównanie Projektów i Faz (Benchmarking)</h2>
-        <p class="text-xs text-slate-500 mb-4">Zaznacz fazy inwestycji, które chcesz zestawić na wykresach porównawczych.</p>
+        <div class="flex flex-wrap justify-between items-center mb-3 gap-2">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900 mb-1">Porównanie Projektów i Etapów (Benchmarking BI)</h2>
+            <p class="text-xs text-slate-500">Zaznacz poszczególne etapy inwestycji, które chcesz zestawić na wykresach porównawczych.</p>
+          </div>
+          <div class="flex items-center gap-2 text-xs">
+            <button type="button" onclick="selectAllBIPhases(true)" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition">Zaznacz wszystkie</button>
+            <button type="button" onclick="selectAllBIPhases(false)" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition">Odznacz wszystkie</button>
+          </div>
+        </div>
         
-        <div id="compare-selection" class="flex flex-wrap gap-2 mb-4">
-          <!-- Checkboxy faz generowane dynamicznie -->
+        <div id="compare-selection" class="space-y-3 mb-4">
+          <!-- Checkboxy faz generowane dynamicznie per inwestycja -->
         </div>
 
-        <button onclick="runComparison()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs rounded-lg shadow transition">
+        <button onclick="runComparison()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-lg shadow transition flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
           Wygeneruj Zestawienie Porównawcze
         </button>
       </div>
@@ -323,6 +512,12 @@
         const sList = document.getElementById('stages-datalist');
         if (sList) {
           sList.innerHTML = data.stages.map(s => `<option value="${s}"></option>`).join('');
+        }
+      }
+      if (data.phases) {
+        const phList = document.getElementById('phases-datalist');
+        if (phList) {
+          phList.innerHTML = data.phases.map(p => `<option value="${p}"></option>`).join('');
         }
       }
       if (data.cities) {
@@ -420,6 +615,9 @@
         if (ctx.suggested_stage_name && !document.getElementById('stage-name-input').value) {
           document.getElementById('stage-name-input').value = ctx.suggested_stage_name;
         }
+        if (ctx.suggested_phase_name && !document.getElementById('phase-name-input').value) {
+          document.getElementById('phase-name-input').value = ctx.suggested_phase_name;
+        }
       } else {
         if (ctx.benchmarks && ctx.benchmarks.total_projects > 0) {
           box.classList.remove('hidden');
@@ -500,14 +698,28 @@
       }
     }
 
-    // Drag and drop obsługa
+    // Zmienne stanu kolejki importu wsadowego
+    let batchQueue = [];
+    let batchCurrentIndex = -1;
+    let batchApprovedCount = 0;
+    let batchRejectedCount = 0;
+    let batchRejectedFiles = [];
+    let isBatchAutoApprove = false;
+
+    // Drag and drop obsługa (obsługa pojedynczego pliku oraz wielu plików / folderu)
     const dropZone = document.getElementById('drop-zone');
     dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-emerald-500'); });
     dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-emerald-500'));
     dropZone.addEventListener('drop', (e) => {
       e.preventDefault();
       dropZone.classList.remove('border-emerald-500');
-      if (e.dataTransfer.files.length > 0) handleFileSelect(e.dataTransfer.files[0]);
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        if (e.dataTransfer.files.length === 1) {
+          handleFileSelect(e.dataTransfer.files[0]);
+        } else {
+          handleFolderSelect(e.dataTransfer.files);
+        }
+      }
     });
     dropZone.addEventListener('click', () => document.getElementById('file-input').click());
 
@@ -519,10 +731,340 @@
       setTimeout(() => toast.classList.add('hidden'), 5000);
     }
 
-    // Wysłanie pliku do parsowania w strefie buforowej
+    // Obsługa wyboru folderu lub wielu plików
+    function handleFolderSelect(fileList) {
+      if (!fileList || fileList.length === 0) return;
+      const validExts = ['.xlsx', '.xls', '.ods'];
+      const filtered = Array.from(fileList).filter(f => {
+        const lower = f.name.toLowerCase();
+        return validExts.some(ext => lower.endsWith(ext)) && !f.name.startsWith('~$');
+      });
+
+      if (filtered.length === 0) {
+        showToast('Nie znaleziono obsługiwanych plików .xlsx/.xls/.ods w wybranym folderze.', true);
+        return;
+      }
+
+      // Sortowanie alfabetyczne po nazwie
+      filtered.sort((a, b) => a.name.localeCompare(b.name, 'pl', { numeric: true }));
+
+      if (filtered.length === 1) {
+        handleFileSelect(filtered[0]);
+        return;
+      }
+
+      const queueItems = filtered.map(f => {
+        let dir = '';
+        if (f.webkitRelativePath) {
+          const parts = f.webkitRelativePath.split('/');
+          if (parts.length > 1) {
+            dir = parts.slice(0, -1).join('/');
+          }
+        }
+        return {
+          type: 'file',
+          file: f,
+          filename: f.name,
+          directory: dir,
+          size: f.size
+        };
+      });
+      startBatchQueue(queueItems);
+    }
+
+    // Wczytanie plików z katalogu serwera (np. KPI - WSKAZNIKI)
+    async function loadServerFolder(folderPath) {
+      try {
+        showToast(`Skanowanie katalogu '${folderPath}'...`);
+        const res = await fetch(`/api/scan-directory?directory=${encodeURIComponent(folderPath)}`);
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail || 'Błąd skanowania katalogu.');
+        }
+        const data = await res.json();
+        if (!data.files || data.files.length === 0) {
+          showToast(`Katalog '${folderPath}' nie zawiera żadnych plików Excel/ODS.`, true);
+          return;
+        }
+
+        const queueItems = data.files.map(f => ({
+          type: 'server',
+          filepath: f.path,
+          filename: f.filename,
+          directory: f.directory || folderPath,
+          size: f.size
+        }));
+        startBatchQueue(queueItems);
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    // Inicjalizacja kolejki wsadowej
+    function startBatchQueue(items) {
+      batchQueue = items;
+      batchCurrentIndex = 0;
+      batchApprovedCount = 0;
+      batchRejectedCount = 0;
+      batchRejectedFiles = [];
+      isBatchAutoApprove = false;
+
+      // Pokazanie paska kolejki i przycisków odrzucania
+      const banner = document.getElementById('batch-queue-banner');
+      if (banner) banner.classList.remove('hidden');
+      const topRej = document.getElementById('batch-top-reject-btn');
+      if (topRej) topRej.classList.remove('hidden');
+      const btmRej = document.getElementById('batch-bottom-reject-btn');
+      if (btmRej) btmRej.classList.remove('hidden');
+
+      loadBatchFileAt(0);
+    }
+
+    // Wczytanie pliku o danym indeksie
+    async function loadBatchFileAt(index) {
+      if (index >= batchQueue.length) {
+        finishBatchQueue();
+        return;
+      }
+
+      batchCurrentIndex = index;
+      updateBatchQueueBanner();
+
+      const item = batchQueue[index];
+      document.getElementById('file-info').classList.remove('hidden');
+      const dirBadge = document.getElementById('file-directory-badge');
+      if (dirBadge) {
+        if (item.directory) {
+          dirBadge.innerText = item.directory;
+          dirBadge.classList.remove('hidden');
+        } else {
+          dirBadge.classList.add('hidden');
+        }
+      }
+      document.getElementById('file-name').innerText = item.filename;
+      document.getElementById('file-size').innerText = item.size ? `${(item.size / 1024).toFixed(1)} KB` : '';
+
+      try {
+        let res;
+        if (item.type === 'file') {
+          const formData = new FormData();
+          formData.append('file', item.file);
+          res = await fetch('/api/parse-staging', { method: 'POST', body: formData });
+        } else {
+          res = await fetch('/api/parse-server-file', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filepath: item.filepath })
+          });
+        }
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail || 'Błąd parsowania pliku.');
+        }
+
+        const data = await res.json();
+        if (item.directory) {
+          data.directory = item.directory;
+        }
+        currentStagingData = data;
+        renderStagingArea(data);
+
+        // Jeśli włączony jest tryb automatycznego zatwierdzania pozostałych
+        if (isBatchAutoApprove) {
+          await saveStagingProject(true);
+        }
+      } catch (err) {
+        // Automatyczne odrzucenie pliku z błędem parsowania
+        batchRejectedCount++;
+        batchRejectedFiles.push({
+          filename: item.filename,
+          directory: item.directory || '',
+          reason: `Błąd parsowania: ${err.message}`
+        });
+        showToast(`Odrzucono '${item.filename}' (${err.message})`, true);
+        updateBatchQueueBanner();
+
+        // Przejście do następnego pliku
+        setTimeout(() => {
+          loadBatchFileAt(index + 1);
+        }, 500);
+      }
+    }
+
+    // Aktualizacja widoku paska stanu kolejki
+    function updateBatchQueueBanner() {
+      if (batchQueue.length === 0) return;
+      const item = batchQueue[batchCurrentIndex] || batchQueue[batchQueue.length - 1];
+      const currentNum = Math.min(batchCurrentIndex + 1, batchQueue.length);
+      const total = batchQueue.length;
+      const pct = Math.round(((currentNum) / total) * 100);
+
+      const qDirBadge = document.getElementById('queue-current-directory-badge');
+      if (qDirBadge) {
+        if (item.directory) {
+          qDirBadge.innerText = item.directory;
+          qDirBadge.classList.remove('hidden');
+        } else {
+          qDirBadge.classList.add('hidden');
+        }
+      }
+
+      const fnEl = document.getElementById('queue-current-file-name');
+      if (fnEl) fnEl.innerText = item.filename;
+      const stEl = document.getElementById('queue-step-label');
+      if (stEl) stEl.innerText = `Przetwarzanie pliku ${currentNum} z ${total} (${pct}%)`;
+      const appEl = document.getElementById('queue-approved-count');
+      if (appEl) appEl.innerText = batchApprovedCount;
+      const rejEl = document.getElementById('queue-rejected-count');
+      if (rejEl) rejEl.innerText = batchRejectedCount;
+      const remEl = document.getElementById('queue-remaining-count');
+      if (remEl) remEl.innerText = Math.max(0, total - batchCurrentIndex);
+      const pbEl = document.getElementById('queue-progress-bar');
+      if (pbEl) pbEl.style.width = `${pct}%`;
+    }
+
+    // Odrzucenie bieżącego pliku
+    function rejectCurrentBatchFile() {
+      if (batchQueue.length === 0 || batchCurrentIndex < 0 || batchCurrentIndex >= batchQueue.length) return;
+      const item = batchQueue[batchCurrentIndex];
+      batchRejectedCount++;
+      batchRejectedFiles.push({
+        filename: item.filename,
+        directory: item.directory || '',
+        reason: 'Odrzucono ręcznie przez użytkownika'
+      });
+      showToast(`Odrzucono plik: ${item.filename}`);
+      updateBatchQueueBanner();
+      loadBatchFileAt(batchCurrentIndex + 1);
+    }
+
+    // Automatyczne zatwierdzenie wszystkich pozostałych
+    async function autoApproveRemainingBatch() {
+      isBatchAutoApprove = true;
+      showToast('Włączono automatyczne zatwierdzanie pozostałych plików...');
+      if (currentStagingData) {
+        await saveStagingProject(true);
+      } else {
+        loadBatchFileAt(batchCurrentIndex);
+      }
+    }
+
+    // Przerwanie kolejki
+    function cancelBatchQueue() {
+      if (confirm('Czy na pewno chcesz przerwać przetwarzanie kolejki importu?')) {
+        finishBatchQueue();
+      }
+    }
+
+    // Zakończenie kolejki
+    function finishBatchQueue() {
+      const banner = document.getElementById('batch-queue-banner');
+      if (banner) banner.classList.add('hidden');
+      const topRej = document.getElementById('batch-top-reject-btn');
+      if (topRej) topRej.classList.add('hidden');
+      const btmRej = document.getElementById('batch-bottom-reject-btn');
+      if (btmRej) btmRej.classList.add('hidden');
+      showBatchSummaryModal();
+      loadSuggestions();
+    }
+
+    // Otwarcie modala z podsumowaniem i listą odrzuconych
+    function showBatchSummaryModal() {
+      const modal = document.getElementById('batch-summary-modal');
+      if (!modal) return;
+      modal.classList.remove('hidden');
+
+      document.getElementById('summary-total-count').innerText = batchQueue.length;
+      document.getElementById('summary-approved-count').innerText = batchApprovedCount;
+      document.getElementById('summary-rejected-count').innerText = batchRejectedCount;
+
+      const textarea = document.getElementById('rejected-files-textarea');
+      const copyBtn = document.getElementById('copy-rejected-btn');
+
+      if (batchRejectedFiles.length > 0) {
+        textarea.value = batchRejectedFiles.map(r => `${r.directory ? r.directory + '/' : ''}${r.filename}\t(Powód: ${r.reason})`).join('\n');
+        if (copyBtn) copyBtn.classList.remove('hidden');
+      } else {
+        textarea.value = 'Brak odrzuconych plików. Wszystkie pliki zostały zatwierdzone i pomyślnie dodane do bazy danych.';
+        if (copyBtn) copyBtn.classList.add('hidden');
+      }
+    }
+
+    function closeBatchSummaryModal() {
+      const modal = document.getElementById('batch-summary-modal');
+      if (modal) modal.classList.add('hidden');
+      batchQueue = [];
+      batchCurrentIndex = -1;
+      isBatchAutoApprove = false;
+    }
+
+    // Kopiowanie listy odrzuconych do schowka
+    function copyRejectedToClipboard() {
+      const textarea = document.getElementById('rejected-files-textarea');
+      if (!textarea || !textarea.value) return;
+
+      const text = textarea.value;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          showCopySuccess();
+        }).catch(() => {
+          fallbackCopyText(text);
+        });
+      } else {
+        fallbackCopyText(text);
+      }
+    }
+
+    function showCopySuccess() {
+      const btnText = document.getElementById('copy-btn-text');
+      const oldText = btnText ? btnText.innerText : '';
+      if (btnText) btnText.innerText = '✓ Skopiowano do schowka!';
+      showToast('Lista odrzuconych plików została skopiowana do schowka.');
+      setTimeout(() => {
+        if (btnText) btnText.innerText = oldText || 'Kopiuj listę do schowka';
+      }, 3000);
+    }
+
+    function fallbackCopyText(text) {
+      const textarea = document.getElementById('rejected-files-textarea');
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showCopySuccess();
+      } catch (err) {
+        showToast('Nie udało się skopiować automatycznie. Zaznacz tekst i użyj Ctrl+C.', true);
+      }
+    }
+
+    // Wysłanie pojedynczego pliku do parsowania w strefie buforowej
     async function handleFileSelect(file) {
       if (!file) return;
+      // Reset stanu kolejki przy pojedynczym pliku
+      batchQueue = [];
+      batchCurrentIndex = -1;
+      const banner = document.getElementById('batch-queue-banner');
+      if (banner) banner.classList.add('hidden');
+      const topRej = document.getElementById('batch-top-reject-btn');
+      if (topRej) topRej.classList.add('hidden');
+      const btmRej = document.getElementById('batch-bottom-reject-btn');
+      if (btmRej) btmRej.classList.add('hidden');
+
       document.getElementById('file-info').classList.remove('hidden');
+      const dirBadge = document.getElementById('file-directory-badge');
+      if (dirBadge) {
+        let dir = '';
+        if (file.webkitRelativePath) {
+          const parts = file.webkitRelativePath.split('/');
+          if (parts.length > 1) dir = parts.slice(0, -1).join('/');
+        }
+        if (dir) {
+          dirBadge.innerText = dir;
+          dirBadge.classList.remove('hidden');
+        } else {
+          dirBadge.classList.add('hidden');
+        }
+      }
       document.getElementById('file-name').innerText = file.name;
       document.getElementById('file-size').innerText = `${(file.size / 1024).toFixed(1)} KB`;
 
@@ -543,6 +1085,59 @@
       }
     }
 
+    function renderReimportBanner(analysis) {
+      const banner = document.getElementById('reimport-banner');
+      if (!banner) return;
+      if (!analysis || !analysis.is_existing_project) {
+        banner.classList.add('hidden');
+        return;
+      }
+
+      const iconEl = document.getElementById('reimport-banner-icon');
+      const titleEl = document.getElementById('reimport-banner-title');
+      const msgEl = document.getElementById('reimport-banner-message');
+      const detEl = document.getElementById('reimport-banner-details');
+      const actEl = document.getElementById('reimport-banner-actions');
+      detEl.innerHTML = '';
+      actEl.innerHTML = '';
+
+      if (analysis.is_exact_file_duplicate) {
+        banner.className = 'rounded-xl p-4 border border-amber-300 bg-amber-50 text-amber-900 shadow-sm';
+        iconEl.innerHTML = `<svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
+        titleEl.innerText = 'Wykryto powtórzony plik (Zduplikowany zestaw danych)';
+        msgEl.innerText = `${analysis.summary_message} Wszystkie wskaźniki są w 100% zgodne z istniejącą bazą. Możesz pominąć ten plik lub zaktualizować dane.`;
+        
+        actEl.innerHTML = `
+          <button type="button" onclick="rejectCurrentBatchFile()" class="px-3 py-1.5 bg-amber-200 hover:bg-amber-300 text-amber-900 rounded-lg text-xs font-bold transition">Pomiń ten duplikat</button>
+        `;
+        banner.classList.remove('hidden');
+      } else if (analysis.has_new_phases) {
+        banner.className = 'rounded-xl p-4 border border-emerald-300 bg-emerald-50 text-emerald-950 shadow-sm';
+        iconEl.innerHTML = `<svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>`;
+        titleEl.innerText = '✨ Wykryto nowe fazy projektowe / etapy w pliku!';
+        msgEl.innerText = `${analysis.summary_message} Zgodnie z hierarchią APK < WPK < PB < PW nowe fazy zostały automatycznie zaznaczone poniżej.`;
+
+        if (analysis.new_phases_detected && analysis.new_phases_detected.length > 0) {
+          analysis.new_phases_detected.forEach(np => {
+            const upBadge = np.is_hierarchy_upgrade ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-200 text-emerald-900 ml-1.5">Nowsza faza w hierarchii</span>` : '';
+            detEl.innerHTML += `<div class="text-xs bg-white/70 p-2 rounded border border-emerald-200 flex items-center justify-between">
+              <span><strong>${np.stage_name || 'Etap'}:</strong> ${np.message}</span>
+              ${upBadge}
+            </div>`;
+          });
+        }
+        banner.classList.remove('hidden');
+      } else if (analysis.all_phases_already_imported) {
+        banner.className = 'rounded-xl p-4 border border-blue-200 bg-blue-50 text-blue-900 shadow-sm';
+        iconEl.innerHTML = `<svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+        titleEl.innerText = 'Rozpoznano istniejącą inwestycję (Częściowa aktualizacja)';
+        msgEl.innerText = analysis.summary_message;
+        banner.classList.remove('hidden');
+      } else {
+        banner.classList.add('hidden');
+      }
+    }
+
     // Prezentacja wyników audytu w Staging Area
     function renderStagingArea(data) {
       document.getElementById('staging-empty').classList.add('hidden');
@@ -552,6 +1147,7 @@
       // Automatyczne podpowiedzi na podstawie bazy i analizy pliku
       document.getElementById('project-name-input').value = data.suggested_project_name || '';
       document.getElementById('stage-name-input').value = data.suggested_stage_name || '';
+      document.getElementById('phase-name-input').value = data.suggested_phase_name || 'PB';
       if (data.suggested_city) document.getElementById('city-input').value = data.suggested_city;
       if (data.suggested_district) document.getElementById('district-input').value = data.suggested_district;
       if (data.suggested_developer) document.getElementById('developer-input').value = data.suggested_developer;
@@ -565,22 +1161,271 @@
       }
 
       updateAuditContextUI(data);
+      renderReimportBanner(data.reimport_analysis);
+
+      // Aktualizacja podglądu katalogu jeśli dostępny
+      const dirBadge = document.getElementById('file-directory-badge');
+      if (dirBadge) {
+        if (data.directory) {
+          dirBadge.innerText = data.directory;
+          dirBadge.classList.remove('hidden');
+        }
+      }
+
+      // Renderowanie podsumowania wykrytych etapów i faz
+      const sumBox = document.getElementById('detected-stages-summary-box');
+      const sumChips = document.getElementById('detected-stages-chips');
+      const countBadge = document.getElementById('detected-stages-count-badge');
+      const detectedItems = data.detected_phases_summary || data.detected_stages || [];
+
+      if (sumBox && sumChips && detectedItems.length > 0) {
+        sumBox.classList.remove('hidden');
+        if (countBadge) countBadge.innerText = `${detectedItems.length} pozycji`;
+        sumChips.innerHTML = detectedItems.map(item => {
+          const isLead = item.is_leading ? '<span class="ml-1 text-[9px] uppercase px-1.5 py-0.5 bg-emerald-700 text-white rounded font-bold">Wiodąca</span>' : '';
+          const pumVal = item.pum !== undefined && item.pum !== null ? item.pum : item.pum_preview;
+          const lokVal = item.lokale !== undefined && item.lokale !== null ? item.lokale : item.lokale_preview;
+          const pumStr = pumVal ? `${Number(pumVal).toLocaleString('pl-PL')} m² PUM` : (item.has_data ? 'dane obecne' : 'brak danych');
+          const lokStr = lokVal ? `, ${lokVal} lok.` : '';
+          const bgClass = item.has_data 
+            ? (item.is_leading ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-bold' : 'bg-teal-50 text-teal-900 border-teal-200')
+            : 'bg-slate-100 text-slate-500 border-slate-200 border-dashed';
+          return `
+            <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs border ${bgClass} shadow-2xs">
+              <span><strong>${item.stage_name || ''} [${item.phase_name || ''}]</strong>: ${pumStr}${lokStr}</span>
+              ${isLead}
+            </div>
+          `;
+        }).join('');
+      } else if (sumBox) {
+        sumBox.classList.add('hidden');
+      }
+
+      // Obsługa panelu wyboru etapów (pliki wieloetapowe)
+      const msPanel = document.getElementById('multistage-panel');
+      const msToggle = document.getElementById('multistage-toggle');
+      const msBadge = document.getElementById('multistage-badge');
+      const stageInput = document.getElementById('stage-name-input');
+      const phaseInput = document.getElementById('phase-name-input');
+
+      if (data.is_multistage && data.detected_stages && data.detected_stages.length > 0) {
+        msPanel.classList.remove('hidden');
+        msToggle.checked = true;
+        msBadge.innerText = `Wykryto ${data.detected_stages.length} etapów`;
+
+        // Jeśli etapy dotyczą jednego etapu (np. OCK 1 z fazami APK, WPK, PB), pozwalamy edytować nazwę etapu!
+        const uniqueStages = [...new Set(data.detected_stages.map(s => s.stage_name).filter(Boolean))];
+        if (uniqueStages.length <= 1) {
+          stageInput.value = data.suggested_stage_name || (uniqueStages[0] || 'Całość');
+          stageInput.disabled = false;
+          phaseInput.value = `${data.suggested_phase_name || 'PB'} (wybór w tabeli: ${data.detected_stages.length} faz)`;
+          phaseInput.disabled = false;
+        } else {
+          stageInput.value = data.suggested_stage_name || 'Wieloetapowy (wybór w tabeli)';
+          stageInput.disabled = true;
+          phaseInput.value = 'Różne fazy (w tabeli)';
+          phaseInput.disabled = true;
+        }
+        renderMultistageTable(data.detected_stages);
+      } else {
+        msPanel.classList.add('hidden');
+        msToggle.checked = false;
+        stageInput.disabled = false;
+        phaseInput.disabled = false;
+      }
+
+      renderPhasesCards();
+    }
+
+    // Renderowanie tabeli wyboru etapów
+    function renderMultistageTable(stages) {
+      const tbody = document.getElementById('multistage-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      stages.forEach((st) => {
+        const tr = document.createElement('tr');
+        tr.className = st.selected ? 'hover:bg-slate-50 transition' : 'opacity-40 bg-slate-50/50 hover:opacity-75 transition';
+
+        const statusBadge = st.is_summary 
+          ? '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">Suma</span>' 
+          : (st.is_duplicate 
+            ? '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300" title="Ta faza znajduje się już w bazie">Już w bazie</span>'
+            : (st.is_new_phase
+              ? '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">✨ Nowa faza</span>'
+              : (st.has_data 
+                ? '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">Aktywny</span>' 
+                : '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-500">Pusty</span>')));
+
+        const phaseOptions = ['PB', 'PW', 'APK', 'WPK', 'Koncepcja', 'Bazowy PPP', 'Standard'].map(opt => 
+          `<option value="${opt}" ${st.phase_name === opt ? 'selected' : ''}>${opt}</option>`
+        ).join('');
+
+        const safeStageName = st.stage_name || st.display_name || 'Całość';
+
+        tr.innerHTML = `
+          <td class="py-2.5 px-3 text-center">
+            <input type="checkbox" ${st.selected ? 'checked' : ''} onchange="onStageToggle('${st.id}', this.checked)" class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer">
+          </td>
+          <td class="py-2.5 px-3 font-medium">
+            <input type="text" value="${safeStageName}" oninput="onStageNameInput('${st.id}', this.value)" class="w-full text-xs px-2 py-1 border border-slate-200 rounded font-semibold text-slate-800 focus:ring-1 focus:ring-emerald-500 bg-white">
+          </td>
+          <td class="py-2.5 px-3">
+            <select onchange="onStagePhaseChange('${st.id}', this.value)" class="text-xs px-2 py-1 border border-slate-200 rounded text-slate-700 bg-white focus:ring-1 focus:ring-emerald-500">
+              ${phaseOptions}
+            </select>
+          </td>
+          <td class="py-2.5 px-3 text-slate-500 font-mono text-[11px]">${st.sheet_name}</td>
+          <td class="py-2.5 px-3 text-right text-slate-600">
+            ${st.dzialka_preview ? `${st.dzialka_preview.toLocaleString('pl-PL')} m² <span class="text-[10px] text-emerald-600 block font-normal">(własna)</span>` : '<span class="text-slate-400 text-[11px]">część działki</span>'}
+          </td>
+          <td class="py-2.5 px-3 text-right text-slate-600">${st.lokale_preview || '-'}</td>
+          <td class="py-2.5 px-3 text-center">${statusBadge}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Obsługa interaktywnych zmian w tabeli etapów
+    function onStageToggle(stageId, isChecked) {
+      if (!currentStagingData || !currentStagingData.detected_stages) return;
+      const st = currentStagingData.detected_stages.find(s => s.id === stageId);
+      if (st) {
+        st.selected = isChecked;
+        renderMultistageTable(currentStagingData.detected_stages);
+        renderPhasesCards();
+      }
+    }
+
+    function onStageNameInput(stageId, val) {
+      if (!currentStagingData || !currentStagingData.detected_stages) return;
+      const st = currentStagingData.detected_stages.find(s => s.id === stageId);
+      if (st) {
+        const oldDisp = st.display_name;
+        st.stage_name = val.trim();
+        st.display_name = `${st.stage_name} (${st.phase_name})`;
+        if (currentStagingData.phases_data && currentStagingData.phases_data[oldDisp]) {
+          const pdata = currentStagingData.phases_data[oldDisp];
+          delete currentStagingData.phases_data[oldDisp];
+          pdata.stage_name = st.stage_name;
+          pdata.display_name = st.display_name;
+          currentStagingData.phases_data[st.display_name] = pdata;
+          if (currentStagingData.audit_by_phase && currentStagingData.audit_by_phase[oldDisp]) {
+            currentStagingData.audit_by_phase[st.display_name] = currentStagingData.audit_by_phase[oldDisp];
+            delete currentStagingData.audit_by_phase[oldDisp];
+          }
+        }
+        renderPhasesCards();
+      }
+    }
+
+    function onStagePhaseChange(stageId, val) {
+      if (!currentStagingData || !currentStagingData.detected_stages) return;
+      const st = currentStagingData.detected_stages.find(s => s.id === stageId);
+      if (st) {
+        const oldDisp = st.display_name;
+        st.phase_name = val;
+        st.display_name = `${st.stage_name} (${st.phase_name})`;
+        if (currentStagingData.phases_data && currentStagingData.phases_data[oldDisp]) {
+          const pdata = currentStagingData.phases_data[oldDisp];
+          delete currentStagingData.phases_data[oldDisp];
+          pdata.phase_name = st.phase_name;
+          pdata.display_name = st.display_name;
+          currentStagingData.phases_data[st.display_name] = pdata;
+          if (currentStagingData.audit_by_phase && currentStagingData.audit_by_phase[oldDisp]) {
+            currentStagingData.audit_by_phase[st.display_name] = currentStagingData.audit_by_phase[oldDisp];
+            delete currentStagingData.audit_by_phase[oldDisp];
+          }
+        }
+        renderPhasesCards();
+      }
+    }
+
+    function selectAllStages(checked) {
+      if (!currentStagingData || !currentStagingData.detected_stages) return;
+      currentStagingData.detected_stages.forEach(st => st.selected = checked);
+      renderMultistageTable(currentStagingData.detected_stages);
+      renderPhasesCards();
+    }
+
+    function selectStagesWithDataOnly() {
+      if (!currentStagingData || !currentStagingData.detected_stages) return;
+      currentStagingData.detected_stages.forEach(st => {
+        st.selected = st.has_data && !st.is_summary && !st.is_excluded;
+      });
+      renderMultistageTable(currentStagingData.detected_stages);
+      renderPhasesCards();
+    }
+
+    function toggleMultistageMode(isMulti) {
+      if (!currentStagingData) return;
+      currentStagingData.is_multistage = isMulti;
+      const tableWrapper = document.getElementById('multistage-table-body')?.parentElement?.parentElement;
+      const stageInput = document.getElementById('stage-name-input');
+      const phaseInput = document.getElementById('phase-name-input');
+      if (isMulti) {
+        if (tableWrapper) tableWrapper.classList.remove('hidden');
+        if (stageInput) {
+          stageInput.disabled = true;
+          stageInput.value = 'Wieloetapowy (wybór w tabeli)';
+        }
+        if (phaseInput) {
+          phaseInput.disabled = true;
+          phaseInput.value = 'Różne fazy (w tabeli)';
+        }
+      } else {
+        if (tableWrapper) tableWrapper.classList.add('hidden');
+        if (stageInput) {
+          stageInput.disabled = false;
+          stageInput.value = currentStagingData.suggested_stage_name || '';
+        }
+        if (phaseInput) {
+          phaseInput.disabled = false;
+          phaseInput.value = currentStagingData.suggested_phase_name || 'PB';
+        }
+      }
+      renderPhasesCards();
+    }
+
+    // Renderowanie kart audytu z uwzględnieniem zaznaczonych etapów
+    function renderPhasesCards() {
+      if (!currentStagingData || !currentStagingData.phases_data) return;
+
+      const isMulti = currentStagingData.is_multistage && currentStagingData.detected_stages && currentStagingData.detected_stages.length > 0;
+      const selectedKeys = new Set();
+      if (isMulti) {
+        currentStagingData.detected_stages.forEach(st => {
+          if (st.selected) {
+            selectedKeys.add(st.display_name);
+            selectedKeys.add(st.stage_name);
+            selectedKeys.add(st.id);
+          }
+        });
+      }
 
       let passCount = 0, warnCount = 0, failCount = 0;
       const container = document.getElementById('phases-container');
       container.innerHTML = '';
 
-      // Cross-phase audyt jeśli występuje (w tym z etapami zapisanymi wcześniej w bazie)
-      renderCrossPhaseCard(data.cross_phase_audit || []);
-      (data.cross_phase_audit || []).forEach(ar => {
+      // Cross-phase audyt jeśli występuje
+      renderCrossPhaseCard(currentStagingData.cross_phase_audit || []);
+      (currentStagingData.cross_phase_audit || []).forEach(ar => {
         if (ar.status === 'PASS') passCount++;
         else if (ar.status === 'WARNING') warnCount++;
         else failCount++;
       });
 
-      // Poszczególne fazy
-      for (const [phaseName, pData] of Object.entries(data.phases_data)) {
-        const auditItems = data.audit_by_phase[phaseName] || [];
+      // Poszczególne fazy i etapy
+      for (const [phaseName, pData] of Object.entries(currentStagingData.phases_data)) {
+        if (isMulti) {
+          const isSelected = selectedKeys.has(phaseName) || 
+                             selectedKeys.has(pData.display_name) || 
+                             selectedKeys.has(pData.stage_name) ||
+                             (pData.stage_id && selectedKeys.has(pData.stage_id));
+          if (!isSelected) continue;
+        }
+
+        const auditItems = (currentStagingData.audit_by_phase && currentStagingData.audit_by_phase[phaseName]) || [];
         auditItems.forEach(ar => {
           if (ar.status === 'PASS') passCount++;
           else if (ar.status === 'WARNING') warnCount++;
@@ -620,7 +1465,7 @@
           `;
         });
 
-        // Wyodrębniona prezentacja bilansu nadziemia (Pcn vs Pcnb) oraz kluczowych wskaźników
+        // Prezentacja bilansu nadziemia (Pcn vs Pcnb) oraz kluczowych wskaźników
         const pcnVal = pData.pow_calkowita_nadziemia ? `${pData.pow_calkowita_nadziemia.toLocaleString('pl-PL')} m²` : '-';
         const pcnbVal = pData.pow_calkowita_nadziemia_z_balkonami ? `${pData.pow_calkowita_nadziemia_z_balkonami.toLocaleString('pl-PL')} m²` : '-';
         const plbVal = pData.pow_calkowita_balkonow_loggii ? `${pData.pow_calkowita_balkonow_loggii.toLocaleString('pl-PL')} m²` : '-';
@@ -690,7 +1535,7 @@
     }
 
     // Zapis ze Staging do Bazy
-    async function saveStagingProject() {
+    async function saveStagingProject(isAuto = false) {
       if (!currentStagingData) return;
       const projectName = document.getElementById('project-name-input').value.trim();
       if (!projectName) {
@@ -698,17 +1543,52 @@
         return;
       }
 
+      const isMulti = currentStagingData.is_multistage && currentStagingData.detected_stages && currentStagingData.detected_stages.length > 0;
+      let finalPhasesData = {};
+
+      if (isMulti) {
+        const selectedStages = currentStagingData.detected_stages.filter(s => s.selected);
+        if (selectedStages.length === 0) {
+          showToast('Zaznacz co najmniej jeden etap do zaimportowania!', true);
+          return;
+        }
+        const customStage = document.getElementById('stage-name-input').value.trim();
+        const hasCustomStage = customStage && !customStage.startsWith('Wieloetapowy');
+
+        selectedStages.forEach(st => {
+          const entry = currentStagingData.phases_data[st.display_name] ||
+                        currentStagingData.phases_data[st.stage_name] ||
+                        currentStagingData.phases_data[st.phase_name] ||
+                        Object.values(currentStagingData.phases_data).find(p => p.stage_id === st.id || p.col_idx === st.col_idx);
+          if (entry) {
+            entry.stage_name = hasCustomStage ? customStage : (st.stage_name || 'Całość');
+            entry.phase_name = st.phase_name || 'Standard';
+            entry.display_name = `${entry.stage_name} (${entry.phase_name})`;
+            finalPhasesData[entry.display_name] = entry;
+          }
+        });
+      } else {
+        finalPhasesData = currentStagingData.phases_data;
+        for (const [k, pData] of Object.entries(finalPhasesData)) {
+          if (!pData.stage_name) pData.stage_name = stageName || 'Całość';
+          if (!pData.phase_name) pData.phase_name = phaseName || 'Standard';
+          if (!pData.display_name) pData.display_name = `${pData.stage_name} (${pData.phase_name})`;
+        }
+      }
+
       const stageName = document.getElementById('stage-name-input').value.trim();
+      const phaseName = document.getElementById('phase-name-input').value.trim();
 
       const payload = {
         project_name: projectName,
-        stage_name: stageName,
+        stage_name: isMulti ? '' : stageName,
+        phase_name: isMulti ? '' : phaseName,
         city: document.getElementById('city-input').value.trim(),
         district: document.getElementById('district-input').value.trim(),
         developer: document.getElementById('developer-input').value.trim(),
         notes: document.getElementById('notes-input').value.trim(),
         source_filename: currentStagingData.filename,
-        phases_data: currentStagingData.phases_data
+        phases_data: finalPhasesData
       };
 
       try {
@@ -719,92 +1599,348 @@
         });
         if (!res.ok) throw new Error('Błąd zapisu projektu.');
         const result = await res.json();
-        showToast(result.message);
-        loadSuggestions(); // Odświeżenie listy podpowiedzi po zapisie
-        switchTab('catalog-tab');
+        
+        // Jeśli przetwarzana jest kolejka importu wsadowego z folderu
+        if (batchQueue.length > 0) {
+          batchApprovedCount++;
+          showToast(`Zatwierdzono i zapisano w bazie: ${projectName}`);
+          updateBatchQueueBanner();
+          loadBatchFileAt(batchCurrentIndex + 1);
+        } else {
+          showToast(result.message);
+          loadSuggestions(); // Odświeżenie listy podpowiedzi po zapisie
+          switchTab('catalog-tab');
+        }
       } catch (err) {
         showToast(err.message, true);
+        if (batchQueue.length > 0 && isAuto) {
+          batchRejectedCount++;
+          batchRejectedFiles.push({ filename: currentStagingData.filename, reason: `Błąd zapisu: ${err.message}` });
+          loadBatchFileAt(batchCurrentIndex + 1);
+        }
       }
     }
 
-    // Ładowanie listy projektów do tabeli katalogu
+    // Ładowanie listy projektów do tabeli katalogu z obsługą akordeonu etapów
     async function loadProjectsCatalog() {
       try {
         const res = await fetch('/api/projects');
         const projects = await res.json();
-        document.getElementById('projects-count').innerText = projects.length;
+        
+        const totalStages = projects.reduce((acc, p) => acc + (p.phases ? p.phases.length : 0), 0);
+        const projectsCountEl = document.getElementById('projects-count');
+        if (projectsCountEl) projectsCountEl.innerText = `${projects.length} (${totalStages} etapów)`;
+
+        const statsBadge = document.getElementById('catalog-stats-badge');
+        if (statsBadge) statsBadge.innerText = `${projects.length} inwestycji • ${totalStages} zarejestrowanych etapów`;
 
         const tbody = document.getElementById('projects-table-body');
         tbody.innerHTML = '';
         if (projects.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="8" class="px-6 py-8 text-center text-slate-400">Brak projektów w bazie. Zaimportuj pierwszy plik w zakładce 'Import i Audyt'.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-8 text-center text-slate-400">Brak projektów w bazie. Zaimportuj pierwszy plik w zakładce 'Import i Audyt'.</td></tr>`;
           return;
         }
 
         projects.forEach(p => {
-          const phasesStr = p.phases.map(ph => `<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700">${ph.phase_name}</span>`).join(' ');
-          const latestPhase = p.phases[0] || {};
-          
-          tbody.innerHTML += `
-            <tr class="hover:bg-slate-50 transition">
-              <td class="px-6 py-4 font-bold text-slate-900">${p.project_name}</td>
-              <td class="px-6 py-4 text-slate-600">${p.city || '-'} ${p.district ? ' / ' + p.district : ''}</td>
-              <td class="px-6 py-4">${phasesStr}</td>
-              <td class="px-6 py-4 font-medium">${latestPhase.pum ? latestPhase.pum.toLocaleString('pl-PL') + ' m²' : '-'}</td>
-              <td class="px-6 py-4">${latestPhase.lokale || '-'}</td>
-              <td class="px-6 py-4">${latestPhase.wskaznik_mp ? latestPhase.wskaznik_mp.toFixed(2) : '-'}</td>
-              <td class="px-6 py-4">${latestPhase.sprawnosc_nadziemia ? latestPhase.sprawnosc_nadziemia.toFixed(3) : '-'}</td>
-              <td class="px-6 py-4 text-right">
-                <button onclick="deleteProject(${p.project_id})" class="text-rose-600 hover:text-rose-800 text-xs font-semibold px-2 py-1 rounded hover:bg-rose-50 transition">
-                  Usuń
-                </button>
-              </td>
-            </tr>
+          const phasesCount = p.phases ? p.phases.length : 0;
+          const phasesBadges = (p.phases || []).map(ph => {
+            const fColor = ph.phase_name === 'PW'
+              ? 'bg-blue-50 text-blue-800 border-blue-200'
+              : (ph.phase_name === 'PB' ? 'bg-indigo-50 text-indigo-800 border-indigo-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200');
+            const sName = ph.stage_name || 'Całość';
+            const dName = ph.display_name || (sName && sName !== ph.phase_name ? `${sName} (${ph.phase_name})` : ph.phase_name);
+            return `<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${fColor}" title="Etap: ${sName}, Faza: ${ph.phase_name}">
+              ${dName}
+            </span>`;
+          }).join(' ');
+
+          const leadingPhases = (p.phases || []).filter(ph => ph.is_leading !== false);
+          const totalPum = p.total_leading_pum !== undefined ? p.total_leading_pum : leadingPhases.reduce((acc, ph) => acc + (ph.pum || 0), 0);
+          const totalUnits = p.total_leading_units !== undefined ? p.total_leading_units : leadingPhases.reduce((acc, ph) => acc + (ph.lokale || 0), 0);
+          const leadingCount = p.leading_stages_count !== undefined ? p.leading_stages_count : leadingPhases.length;
+
+          // Wiersz główny Inwestycji
+          const trProject = document.createElement('tr');
+          trProject.className = 'hover:bg-slate-50/80 transition border-b border-slate-200 cursor-pointer font-medium';
+          trProject.id = `project-row-${p.project_id}`;
+          trProject.onclick = (e) => {
+            if (e.target.closest('button')) return;
+            toggleProjectAccordion(p.project_id);
+          };
+
+          trProject.innerHTML = `
+            <td class="w-10 px-4 py-4 text-center">
+              <button type="button" onclick="toggleProjectAccordion(${p.project_id})" class="text-slate-400 hover:text-emerald-700 transition" id="accordion-btn-${p.project_id}" title="Rozwiń / zwiń etapy">
+                <svg class="w-4 h-4 transform transition-transform duration-200" id="accordion-icon-${p.project_id}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+              </button>
+            </td>
+            <td class="px-4 py-4">
+              <div class="font-bold text-slate-900 flex items-center gap-2">
+                ${p.project_name}
+                ${p.developer ? `<span class="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-600 font-normal">${p.developer}</span>` : ''}
+              </div>
+              <div class="text-[11px] text-slate-400">Dodano: ${p.created_at || '-'} &bull; ${leadingCount} etapów (${phasesCount} faz)</div>
+            </td>
+            <td class="px-4 py-4 text-slate-600 text-xs">
+              ${p.city || '-'} ${p.district ? ' / ' + p.district : ''}
+            </td>
+            <td class="px-4 py-4">
+              <div class="flex flex-wrap items-center gap-1.5 justify-center">
+                ${phasesBadges}
+              </div>
+            </td>
+            <td class="px-4 py-4 text-right font-semibold text-slate-800">
+              ${totalPum > 0 ? totalPum.toLocaleString('pl-PL') + ' m²' : '-'}
+            </td>
+            <td class="px-4 py-4 text-right text-slate-700 font-semibold">
+              ${totalUnits > 0 ? totalUnits : '-'}
+            </td>
+            <td class="px-4 py-4 text-right whitespace-nowrap">
+              <button type="button" onclick="toggleProjectAccordion(${p.project_id})" class="text-emerald-700 hover:text-emerald-900 text-xs font-semibold px-2 py-1 rounded bg-emerald-50 hover:bg-emerald-100 transition mr-2">
+                Szczegóły (${phasesCount})
+              </button>
+              <button type="button" onclick="deleteProject(${p.project_id})" class="text-rose-600 hover:text-rose-800 text-xs font-semibold px-2 py-1 rounded hover:bg-rose-50 transition" title="Usuń całą inwestycję">
+                Usuń
+              </button>
+            </td>
           `;
+          tbody.appendChild(trProject);
+
+          // Wiersz Akordeonu z tabelą Etapów
+          const trDetails = document.createElement('tr');
+          trDetails.id = `stages-row-${p.project_id}`;
+          trDetails.className = 'hidden bg-slate-50/70 border-b border-slate-200';
+          
+          let stagesRowsHtml = '';
+          (p.phases || []).forEach((ph) => {
+            const pnbIsoBadge = (ph.pum_pnb || ph.pum_iso) 
+              ? `<div class="text-[10px] text-slate-400 font-mono">PNB: ${ph.pum_pnb ? ph.pum_pnb.toLocaleString('pl-PL') : '-'} | ISO: ${ph.pum_iso ? ph.pum_iso.toLocaleString('pl-PL') : '-'}</div>` 
+              : '';
+
+            const nadziemieStr = ph.pcn 
+              ? `<div>${ph.pcn.toLocaleString('pl-PL')} m² ${ph.pcnb ? '<span class="text-slate-400 text-[10px]">(z balk: ' + ph.pcnb.toLocaleString('pl-PL') + ')</span>' : ''}</div>` 
+              : '-';
+
+            const sprawnoscStr = ph.sprawnosc_nadziemia 
+              ? `<span class="font-bold text-amber-700">${ph.sprawnosc_nadziemia.toFixed(3)}</span>${ph.sprawnosc_nadziemia_z_balkonami ? ' <span class="text-slate-400 text-[10px]">(' + ph.sprawnosc_nadziemia_z_balkonami.toFixed(3) + ')</span>' : ''}` 
+              : '-';
+
+            const chlonnoscStr = ph.chlonnosc !== null && ph.chlonnosc !== undefined 
+              ? `<span class="font-bold text-emerald-700">${ph.chlonnosc.toFixed(3)}</span>` 
+              : '-';
+
+            const phaseColor = ph.phase_name === 'PW' 
+              ? 'bg-blue-100 text-blue-800 border-blue-200' 
+              : (ph.phase_name === 'PB' ? 'bg-indigo-100 text-indigo-800 border-indigo-200' : 'bg-amber-100 text-amber-800 border-amber-200');
+
+            const plotDesc = (ph.plot_type === 'czesc_dzialki' || !ph.dzialka)
+              ? '<span class="text-[10px] text-slate-400 block font-normal">część działki inwestycji</span>'
+              : '<span class="text-[10px] text-emerald-700 block font-medium">działka własna etapu</span>';
+
+            const isLeadingBadge = ph.is_leading !== false
+              ? '<span class="inline-block px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800">Wiodąca faza</span>'
+              : '<span class="inline-block px-1.5 py-0.2 rounded text-[9px] font-medium bg-slate-100 text-slate-500" title="Poprzednia faza etapu w hierarchii">Poprzednia faza</span>';
+
+            stagesRowsHtml += `
+              <tr class="hover:bg-white transition border-b border-slate-200/70 text-xs ${ph.is_leading === false ? 'opacity-65 bg-slate-50/50' : ''}">
+                <td class="py-2.5 px-3">
+                  <div class="font-bold text-slate-900">${ph.stage_name || 'Całość'}</div>
+                  <div class="flex items-center gap-1.5 mt-0.5">
+                    <span class="inline-block px-1.5 py-0.2 rounded text-[10px] font-bold border ${phaseColor}">${ph.phase_name}</span>
+                    ${isLeadingBadge}
+                  </div>
+                </td>
+                <td class="py-2.5 px-3">
+                  <div class="font-semibold text-slate-900">${ph.pum ? ph.pum.toLocaleString('pl-PL') + ' m²' : '-'}</div>
+                  ${pnbIsoBadge}
+                </td>
+                <td class="py-2.5 px-3">${ph.puu ? ph.puu.toLocaleString('pl-PL') + ' m²' : '-'}</td>
+                <td class="py-2.5 px-3 font-semibold text-slate-800">${ph.pumiu ? ph.pumiu.toLocaleString('pl-PL') + ' m²' : '-'}</td>
+                <td class="py-2.5 px-3">
+                  ${ph.lokale || '-'} ${ph.srm ? `<span class="text-slate-400 text-[11px]">(śr. ${ph.srm.toFixed(1)} m²)</span>` : ''}
+                </td>
+                <td class="py-2.5 px-3">
+                  <div>${ph.dzialka ? ph.dzialka.toLocaleString('pl-PL') + ' m²' : '-'}</div>
+                  ${plotDesc}
+                  <div class="text-[10px] text-slate-500 font-medium">Chłonność: ${chlonnoscStr}</div>
+                </td>
+                <td class="py-2.5 px-3">${nadziemieStr}</td>
+                <td class="py-2.5 px-3">${sprawnoscStr}</td>
+                <td class="py-2.5 px-3">
+                  ${ph.miejsca_parkingowe || '-'} ${ph.wskaznik_mp ? `<span class="text-emerald-700 font-semibold">(${ph.wskaznik_mp.toFixed(2)})</span>` : ''}
+                </td>
+                <td class="py-2.5 px-3 text-slate-400 font-mono text-[10px]">${ph.source_file || '-'}</td>
+                <td class="py-2.5 px-3 text-right">
+                  <button type="button" onclick="deleteStage(${ph.phase_id}, '${ph.display_name}')" class="text-rose-600 hover:text-rose-800 hover:bg-rose-50 text-[11px] font-semibold px-2 py-0.5 rounded transition">
+                    Usuń etap
+                  </button>
+                </td>
+              </tr>
+            `;
+          });
+
+          trDetails.innerHTML = `
+            <td colspan="7" class="p-4 bg-slate-100/60">
+              <div class="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-xs">
+                <div class="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex justify-between items-center text-xs font-bold text-slate-700">
+                  <span class="flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                    Zarejestrowane Etapy Inwestycji: ${p.project_name} (${phasesCount})
+                  </span>
+                  <span class="text-[11px] text-slate-500 font-normal">Jednostka badawcza KPI: Etap Inwestycji</span>
+                </div>
+                <div class="overflow-x-auto">
+                  <table class="min-w-full text-left text-xs divide-y divide-slate-100">
+                    <thead class="bg-slate-50 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                      <tr>
+                        <th class="py-2 px-3">Etap / Faza</th>
+                        <th class="py-2 px-3">PUM (m²)</th>
+                        <th class="py-2 px-3">PUU (m²)</th>
+                        <th class="py-2 px-3">PUMiU (m²)</th>
+                        <th class="py-2 px-3">Lokale (śrm)</th>
+                        <th class="py-2 px-3">Działka / Chłonność</th>
+                        <th class="py-2 px-3">Nadziemie (Pcn)</th>
+                        <th class="py-2 px-3">Sprawność (Pcn/Pcnb)</th>
+                        <th class="py-2 px-3">MP (Wskaznik)</th>
+                        <th class="py-2 px-3">Plik źródłowy</th>
+                        <th class="py-2 px-3 text-right">Akcje</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 bg-white">
+                      ${stagesRowsHtml}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </td>
+          `;
+          tbody.appendChild(trDetails);
         });
       } catch (err) {
         showToast('Błąd pobierania listy projektów', true);
       }
     }
 
-    async function deleteProject(id) {
-      if (!confirm('Czy na pewno chcesz usunąć ten projekt z bazy?')) return;
-      try {
-        const res = await fetch(`/api/projects/${id}`, { method: 'DELETE' });
-        if (res.ok) {
-          showToast('Projekt usunięty');
-          loadProjectsCatalog();
-        }
-      } catch (err) {
-        showToast('Błąd usuwania projektu', true);
+    function toggleProjectAccordion(projectId) {
+      const row = document.getElementById(`stages-row-${projectId}`);
+      const icon = document.getElementById(`accordion-icon-${projectId}`);
+      if (!row) return;
+      if (row.classList.contains('hidden')) {
+        row.classList.remove('hidden');
+        if (icon) icon.classList.add('rotate-90');
+      } else {
+        row.classList.add('hidden');
+        if (icon) icon.classList.remove('rotate-90');
       }
     }
 
-    // Ładowanie checkboxów faz do benchmarkingu BI
-    async function loadBISelection() {
-      const res = await fetch('/api/projects');
-      const projects = await res.json();
-      const container = document.getElementById('compare-selection');
-      container.innerHTML = '';
+    function toggleAllAccordions(expand) {
+      document.querySelectorAll('[id^="stages-row-"]').forEach(row => {
+        if (expand) row.classList.remove('hidden');
+        else row.classList.add('hidden');
+      });
+      document.querySelectorAll('[id^="accordion-icon-"]').forEach(icon => {
+        if (expand) icon.classList.add('rotate-90');
+        else icon.classList.remove('rotate-90');
+      });
+    }
 
-      if (projects.length === 0) {
-        container.innerHTML = `<span class="text-xs text-slate-400">Brak projektów w bazie do porównania.</span>`;
-        return;
+    async function deleteProject(id) {
+      if (!confirm('Czy na pewno chcesz usunąć całą inwestycję wraz ze wszystkimi etapami z bazy?')) return;
+      try {
+        const res = await fetch(`/api/projects/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          showToast('Inwestycja usunięta');
+          loadProjectsCatalog();
+          loadSuggestions();
+        }
+      } catch (err) {
+        showToast('Błąd usuwania inwestycji', true);
       }
+    }
 
-      projects.forEach(p => {
-        p.phases.forEach((ph, idx) => {
-          const checked = (projects.length <= 4) ? 'checked' : '';
+    async function deleteStage(stageId, stageName) {
+      if (!confirm(`Czy na pewno chcesz usunąć etap '${stageName}' z bazy?`)) return;
+      try {
+        const res = await fetch(`/api/stages/${stageId}`, { method: 'DELETE' });
+        if (res.ok) {
+          showToast(`Etap '${stageName}' usunięty`);
+          loadProjectsCatalog();
+          loadSuggestions();
+        }
+      } catch (err) {
+        showToast('Błąd usuwania etapu', true);
+      }
+    }
+
+    // Ładowanie checkboxów faz do benchmarkingu BI z podziałem na inwestycje
+    async function loadBISelection() {
+      try {
+        const res = await fetch('/api/projects');
+        const projects = await res.json();
+        const container = document.getElementById('compare-selection');
+        container.innerHTML = '';
+
+        if (projects.length === 0) {
+          container.innerHTML = `<span class="text-xs text-slate-400">Brak etapów w bazie do porównania. Zaimportuj pierwszy plik w zakładce 'Import i Audyt'.</span>`;
+          return;
+        }
+
+        projects.forEach(p => {
+          // W BI bierzemy pod uwagę wyłącznie najnowszą dostępną fazę danego etapu (leading_phases / stages)
+          const stagesToCompare = p.stages || (p.phases || []).filter(ph => ph.is_leading !== false);
+          const stageCount = stagesToCompare.length;
+          const countText = stageCount === 1 ? '1 etap' : `${stageCount} etapów`;
+
+          const stageCheckboxes = stagesToCompare.map(st => {
+            const stageLabel = (st.stage_name && st.phase_name && st.stage_name.toLowerCase() !== st.phase_name.toLowerCase())
+              ? `${st.stage_name} (${st.phase_name})`
+              : (st.display_name || `${st.stage_name || 'Całość'} (${st.phase_name || ''})`);
+            return `
+              <label class="flex items-center space-x-2 text-xs bg-white px-3 py-1.5 rounded-lg border border-slate-200 cursor-pointer hover:bg-emerald-50 hover:border-emerald-300 transition shadow-2xs">
+                <input type="checkbox" name="phase_compare" value="${st.phase_id}" checked class="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer">
+                <span class="font-medium text-slate-800">${stageLabel}</span>
+              </label>
+            `;
+          }).join('');
+
           container.innerHTML += `
-            <label class="flex items-center space-x-2 text-xs bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 cursor-pointer hover:bg-emerald-50 transition">
-              <input type="checkbox" name="phase_compare" value="${ph.phase_id}" ${checked} class="rounded text-emerald-600 focus:ring-emerald-500">
-              <span class="font-medium text-slate-800">${p.project_name} (${ph.phase_name})</span>
-            </label>
+            <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-800 flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                  ${p.project_name} <span class="text-slate-400 font-normal">(${countText})</span>
+                </span>
+                <div class="space-x-1.5 text-[11px]">
+                  <button type="button" onclick="selectProjectPhases(${p.project_id}, true)" class="text-emerald-700 hover:text-emerald-900 font-semibold">Zaznacz te etapy</button>
+                  <span class="text-slate-300">|</span>
+                  <button type="button" onclick="selectProjectPhases(${p.project_id}, false)" class="text-slate-500 hover:text-slate-700 font-semibold">Odznacz</button>
+                </div>
+              </div>
+              <div class="flex flex-wrap gap-2" id="project-phases-${p.project_id}">
+                ${stageCheckboxes}
+              </div>
+            </div>
           `;
         });
-      });
 
-      if (projects.length > 0) runComparison();
+        runComparison();
+      } catch (err) {
+        showToast('Błąd pobierania danych do benchmarkingu BI', true);
+      }
+    }
+
+    function selectAllBIPhases(checked) {
+      document.querySelectorAll('input[name="phase_compare"]').forEach(cb => cb.checked = checked);
+      runComparison();
+    }
+
+    function selectProjectPhases(projectId, checked) {
+      const container = document.getElementById(`project-phases-${projectId}`);
+      if (container) {
+        container.querySelectorAll('input[name="phase_compare"]').forEach(cb => cb.checked = checked);
+        runComparison();
+      }
     }
 
     // Wykonanie porównania BI i wyrysowanie wykresów
@@ -813,7 +1949,7 @@
       const phaseIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
 
       if (phaseIds.length === 0) {
-        showToast('Zaznacz co najmniej jedną fazę!', true);
+        showToast('Zaznacz co najmniej jeden etap do porównania!', true);
         return;
       }
 
@@ -823,15 +1959,34 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ phase_ids: phaseIds })
         });
+        if (!res.ok) throw new Error('Błąd odpowiedzi serwera przy generowaniu benchmarkingu');
         const data = await res.json();
-        renderCharts(data);
+        
+        try {
+          renderCharts(data);
+        } catch (chartErr) {
+          console.warn('Wykresy Chart.js nie mogły zostać wyrenderowane:', chartErr);
+        }
+
         renderCompareTable(data);
       } catch (err) {
-        showToast('Błąd generowania wykresów BI', true);
+        showToast('Błąd generowania wykresów BI: ' + err.message, true);
       }
     }
 
     function renderCharts(data) {
+      const chartsSection = document.getElementById('bi-charts-section');
+      if (typeof Chart === 'undefined') {
+        if (chartsSection) {
+          chartsSection.innerHTML = `
+            <div class="col-span-1 lg:col-span-2 bg-amber-50 border border-amber-200 p-4 rounded-xl text-xs text-amber-800">
+              <strong>Informacja o trybie offline:</strong> Biblioteka Chart.js nie została wczytana (brak połączenia z CDN). Wszystkie wskaźniki i parametry etapów są w pełni wyliczone i widoczne w poniższej tabeli.
+            </div>
+          `;
+        }
+        return;
+      }
+
       const labels = data.labels;
       const pumValues = data.metrics['PUM (m²)'];
       const unitsValues = data.metrics['Liczba Mieszkań'];
@@ -839,48 +1994,54 @@
       const mpValues = data.metrics['Wskaźnik MP'];
 
       // Chart 1: PUM i Mieszkania
-      if (chartPumInstance) chartPumInstance.destroy();
-      const ctx1 = document.getElementById('chart-pum').getContext('2d');
-      chartPumInstance = new Chart(ctx1, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [
-            { label: 'PUM (m²)', data: pumValues, backgroundColor: 'rgba(16, 185, 129, 0.7)', yAxisID: 'y' },
-            { label: 'Liczba Mieszkań', data: unitsValues, backgroundColor: 'rgba(59, 130, 246, 0.7)', yAxisID: 'y1' }
-          ]
-        },
-        options: {
-          responsive: true,
-          scales: {
-            y: { type: 'linear', position: 'left', title: { display: true, text: 'm²' } },
-            y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'szt.' } }
+      const pumCanvas = document.getElementById('chart-pum');
+      if (pumCanvas) {
+        if (chartPumInstance) chartPumInstance.destroy();
+        const ctx1 = pumCanvas.getContext('2d');
+        chartPumInstance = new Chart(ctx1, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [
+              { label: 'PUM (m²)', data: pumValues, backgroundColor: 'rgba(16, 185, 129, 0.7)', yAxisID: 'y' },
+              { label: 'Liczba Mieszkań', data: unitsValues, backgroundColor: 'rgba(59, 130, 246, 0.7)', yAxisID: 'y1' }
+            ]
+          },
+          options: {
+            responsive: true,
+            scales: {
+              y: { type: 'linear', position: 'left', title: { display: true, text: 'm²' } },
+              y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'szt.' } }
+            }
           }
-        }
-      });
+        });
+      }
 
       // Chart 2: Sprawność i Wskaźnik MP
-      if (chartRatiosInstance) chartRatiosInstance.destroy();
-      const ctx2 = document.getElementById('chart-ratios').getContext('2d');
-      chartRatiosInstance = new Chart(ctx2, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [
-            { label: 'Sprawność Nadziemia', data: sprawnoscValues, backgroundColor: 'rgba(245, 158, 11, 0.7)' },
-            { label: 'Wskaźnik MP/lokal', data: mpValues, backgroundColor: 'rgba(139, 92, 246, 0.7)' }
-          ]
-        },
-        options: {
-          responsive: true,
-          scales: { y: { beginAtZero: true } }
-        }
-      });
+      const ratiosCanvas = document.getElementById('chart-ratios');
+      if (ratiosCanvas) {
+        if (chartRatiosInstance) chartRatiosInstance.destroy();
+        const ctx2 = ratiosCanvas.getContext('2d');
+        chartRatiosInstance = new Chart(ctx2, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [
+              { label: 'Sprawność Nadziemia', data: sprawnoscValues, backgroundColor: 'rgba(245, 158, 11, 0.7)' },
+              { label: 'Wskaźnik MP/lokal', data: mpValues, backgroundColor: 'rgba(139, 92, 246, 0.7)' }
+            ]
+          },
+          options: {
+            responsive: true,
+            scales: { y: { beginAtZero: true } }
+          }
+        });
+      }
 
       // Chart 3: Chłonność vs Powierzchnia Działki (Scatter)
-      if (chartChlonnoscInstance) chartChlonnoscInstance.destroy();
       const chlonnoscCanvas = document.getElementById('chart-chlonnosc');
       if (chlonnoscCanvas) {
+        if (chartChlonnoscInstance) chartChlonnoscInstance.destroy();
         const ctx3 = chlonnoscCanvas.getContext('2d');
         const scatterData = (data.chlonnosc_scatter || data.scatter_chlonnosc || []).map(pt => ({
           x: pt.x,
@@ -984,5 +2145,67 @@
       loadSuggestions();
     });
   </script>
+
+  <!-- MODAL PODSUMOWANIA IMPORTU WSADOWEGO -->
+  <div id="batch-summary-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 space-y-5">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2.5">
+          <span class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm shadow-2xs">
+            ✓
+          </span>
+          <div>
+            <h3 class="text-base font-bold text-slate-900">Podsumowanie Importu Wsadowego</h3>
+            <p class="text-xs text-slate-500">Zakończono przetwarzanie kolejki plików z wybranego katalogu.</p>
+          </div>
+        </div>
+        <button onclick="closeBatchSummaryModal()" class="text-slate-400 hover:text-slate-600 font-bold text-xl leading-none px-2 py-1 rounded-lg hover:bg-slate-100">&times;</button>
+      </div>
+
+      <!-- Statystyki -->
+      <div class="grid grid-cols-3 gap-3 text-center">
+        <div class="bg-slate-50 border border-slate-200 p-3 rounded-xl">
+          <span class="text-xs text-slate-500 block mb-0.5">Wszystkich plików</span>
+          <strong id="summary-total-count" class="text-2xl text-slate-800">0</strong>
+        </div>
+        <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-xl">
+          <span class="text-xs text-emerald-700 font-semibold block mb-0.5">Zatwierdzone w bazie</span>
+          <strong id="summary-approved-count" class="text-2xl text-emerald-800">0</strong>
+        </div>
+        <div class="bg-rose-50 border border-rose-200 p-3 rounded-xl">
+          <span class="text-xs text-rose-700 font-semibold block mb-0.5">Odrzucone / Pominięte</span>
+          <strong id="summary-rejected-count" class="text-2xl text-rose-800">0</strong>
+        </div>
+      </div>
+
+      <!-- Sekcja listy odrzuconych -->
+      <div id="summary-rejected-section" class="space-y-2">
+        <div class="flex items-center justify-between">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            Lista Plików Odrzuconych:
+          </h4>
+          <button type="button" onclick="copyRejectedToClipboard()" id="copy-rejected-btn" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shadow">
+            <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+            <span id="copy-btn-text">Kopiuj listę do schowka</span>
+          </button>
+        </div>
+        <textarea id="rejected-files-textarea" readonly rows="6" placeholder="Brak odrzuconych plików..." class="w-full text-xs font-mono p-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none resize-none"></textarea>
+        <p class="text-[11px] text-slate-400">Możesz skopiować powyższą listę jednym kliknięciem i wkleić do notatnika lub arkusza, aby przeanalizować pliki wymagające korekty.</p>
+      </div>
+
+      <!-- Stopka akcji modala -->
+      <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+        <button type="button" onclick="closeBatchSummaryModal()" class="px-4 py-2 border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold rounded-lg transition">
+          Zamknij
+        </button>
+        <button type="button" onclick="closeBatchSummaryModal(); switchTab('catalog-tab');" class="py-2.5 px-5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-lg shadow transition flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+          Przejdź do Katalogu Inwestycji
+        </button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>

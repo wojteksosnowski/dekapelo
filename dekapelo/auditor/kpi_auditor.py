@@ -344,10 +344,60 @@ class KPIAuditor:
                     actual_value=wsk_iw
                 ))
 
+        # 8. Weryfikacja Chłonności Działki (PUMiU / Pd) i Obsługa Działki Wspólnej
+        pd = kpi_data.get("powierzchnia_dzialki")
+        plot_type = kpi_data.get("plot_type", "wlasna" if (pd and pd > 0) else "czesc_dzialki")
+        wsk_chlonnosc = kpi_data.get("wskaznik_pumiu_pd")
+        uzytkowa_pum = pumiu if pumiu is not None else pum
+
+        if pd and pd > 0:
+            if uzytkowa_pum and wsk_chlonnosc is not None:
+                calc_chlonnosc = uzytkowa_pum / pd
+                diff_chlonnosc = abs(wsk_chlonnosc - calc_chlonnosc)
+                if diff_chlonnosc <= self.tolerance_ratio:
+                    results.append(AuditResult(
+                        category="MATH",
+                        rule_name="Wskaźnik Chłonności Działki (PUMiU / Pd)",
+                        status="PASS",
+                        message=f"Chłonność działki etapu {wsk_chlonnosc:.3f} zgodna z formułą ({calc_chlonnosc:.3f})",
+                        expected_value=calc_chlonnosc,
+                        actual_value=wsk_chlonnosc
+                    ))
+                else:
+                    results.append(AuditResult(
+                        category="MATH",
+                        rule_name="Wskaźnik Chłonności Działki (PUMiU / Pd)",
+                        status="WARNING",
+                        message=f"Wskaźnik chłonności podano {wsk_chlonnosc:.3f}, z formuły PUMiU/Pd wynika {calc_chlonnosc:.3f}",
+                        expected_value=calc_chlonnosc,
+                        actual_value=wsk_chlonnosc
+                    ))
+            elif uzytkowa_pum:
+                calc_chlonnosc = uzytkowa_pum / pd
+                results.append(AuditResult(
+                    category="MATH",
+                    rule_name="Chłonność Działki Etapu",
+                    status="PASS",
+                    message=f"Wyliczona chłonność wydzielonej działki etapu: {calc_chlonnosc:.3f} (PUMiU {uzytkowa_pum:.2f} m² / Pd {pd:.2f} m²)",
+                    expected_value=calc_chlonnosc,
+                    actual_value=calc_chlonnosc
+                ))
+        elif plot_type == "czesc_dzialki" or not pd:
+            results.append(AuditResult(
+                category="LOGIC",
+                rule_name="Działka Inwestycji i Etapu",
+                status="PASS",
+                message="Etap realizowany na części działki inwestycji (brak indywidualnego bilansu terenu dla tego etapu)",
+                expected_value=None,
+                actual_value=None
+            ))
+
         return results
 
     def audit_cross_phases(self, phases_data: Dict[str, Dict[str, Any]]) -> List[AuditResult]:
-        """Porównuje kolejne fazy inwestycji i wykrywa istotne odchylenia."""
+        """Porównuje kolejne fazy projektowe tego samego etapu inwestycji.
+        Zgodnie z domeną: NIGDY nie porównuje odrębnych etapów (np. Etap 1 vs Etap 2) jako kolejnych faz!
+        """
         results: List[AuditResult] = []
         phase_names = list(phases_data.keys())
         if len(phase_names) < 2:
@@ -359,6 +409,14 @@ class KPIAuditor:
             p2_name = phase_names[i + 1]
             d1 = phases_data[p1_name]
             d2 = phases_data[p2_name]
+
+            # Sprawdzenie przynależności do tego samego etapu inwestycji
+            st1 = str(d1.get("stage_name", "")).strip().lower()
+            st2 = str(d2.get("stage_name", "")).strip().lower()
+            
+            # Jeśli nazwy etapów są jednoznacznie różne (np. 'etap 2' vs 'etap 3'), to są odrębne części inwestycji, a nie kolejne fazy
+            if st1 and st2 and st1 != st2 and not any(k in st1 for k in ["apk", "wpk", "pb", "pw", "koncepcja"]):
+                continue
 
             # Porównanie PUM
             pum1 = d1.get("pum")
