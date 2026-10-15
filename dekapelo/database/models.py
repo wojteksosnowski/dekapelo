@@ -24,7 +24,9 @@ class InvestmentProject(Base):
 
 
 class ProjectPhase(Base):
-    """Faza opracowania danej inwestycji (np. Koncepcja, APK, WPK, Projekt Budowlany, PW)."""
+    """Etap projektowy danej inwestycji (np. Koncepcja, APK, WPK, Projekt Budowlany, PW).
+    Podstawowa jednostka pomiarowa i analityczna w systemie.
+    """
     __tablename__ = "project_phases"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -36,6 +38,20 @@ class ProjectPhase(Base):
     project = relationship("InvestmentProject", back_populates="phases")
     kpi = relationship("ProjectKPI", back_populates="phase", uselist=False, cascade="all, delete-orphan")
     audit_logs = relationship("AuditLog", back_populates="phase", cascade="all, delete-orphan")
+
+    @property
+    def investment_name(self) -> str:
+        """Jednolita nazwa inwestycji, do której należy ten etap."""
+        return self.project.name if self.project else ""
+
+    @property
+    def stage_name(self) -> str:
+        """Nazwa etapu projektowego (np. APK, WPK, PB)."""
+        return self.phase_name
+
+
+# Aliasy domenowe: Podstawową jednostką badaną jest 'Etap' (InvestmentStage)
+InvestmentStage = ProjectPhase
 
 
 class ProjectKPI(Base):

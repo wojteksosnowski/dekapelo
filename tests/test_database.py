@@ -52,7 +52,10 @@ def test_create_project_with_kpi(db_session):
     saved = db_session.query(InvestmentProject).filter_by(name="Osiedle Testowe").first()
     assert saved is not None
     assert len(saved.phases) == 1
-    assert saved.phases[0].kpi.pum == 4500.0
+    stage = saved.phases[0]
+    assert stage.kpi.pum == 4500.0
+    assert stage.investment_name == "Osiedle Testowe"
+    assert stage.stage_name == "Projekt Budowlany"
 
     # Test silnika BI
     bi = BIEngine(db_session)
@@ -60,3 +63,10 @@ def test_create_project_with_kpi(db_session):
     assert len(summary) == 1
     assert summary[0]["project_name"] == "Osiedle Testowe"
     assert summary[0]["phases"][0]["pum"] == 4500.0
+
+    # Test pobrania etapów jako jednostki podstawowej
+    stages = bi.get_all_stages()
+    assert len(stages) == 1
+    assert stages[0]["investment_name"] == "Osiedle Testowe"
+    assert stages[0]["stage_name"] == "Projekt Budowlany"
+    assert stages[0]["pum"] == 4500.0

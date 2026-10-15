@@ -178,6 +178,13 @@ async def list_projects(db: Session = Depends(get_db)):
     return JSONResponse(bi.get_all_projects_summary())
 
 
+@app.get("/api/stages")
+async def list_stages(db: Session = Depends(get_db)):
+    """Lista wszystkich etapów inwestycji jako podstawowych jednostek analitycznych."""
+    bi = BIEngine(db)
+    return JSONResponse(bi.get_all_stages())
+
+
 @app.delete("/api/projects/{project_id}")
 async def delete_project(project_id: int, db: Session = Depends(get_db)):
     """Usuwa projekt z bazy danych."""

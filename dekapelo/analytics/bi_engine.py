@@ -53,6 +53,39 @@ class BIEngine:
 
         return summaries
 
+    def get_all_stages(self) -> List[Dict[str, Any]]:
+        """Zwraca listę wszystkich etapów inwestycji jako podstawowych jednostek analitycznych."""
+        stages = self.db.query(ProjectPhase).all()
+        result = []
+        for s in stages:
+            k = s.kpi
+            result.append({
+                "stage_id": s.id,
+                "stage_name": s.phase_name,
+                "investment_name": s.investment_name,
+                "full_name": f"{s.investment_name} ({s.phase_name})",
+                "source_file": s.source_file,
+                "city": s.project.city if s.project else None,
+                "pum": k.pum if k else None,
+                "puu": k.puu if k else None,
+                "pumiu": k.suma_pum_i_puu if k else None,
+                "lokale": k.ilosc_lokali_mieszkalnych if k else None,
+                "srm": k.srednia_wielkosc_mieszkania if k else None,
+                "dzialka": k.powierzchnia_dzialki if k else None,
+                "pow_zabudowy": k.powierzchnia_zabudowy if k else None,
+                "pc": k.powierzchnia_calkowita if k else None,
+                "pcn": k.pow_calkowita_nadziemia if k else None,
+                "pcp": k.pow_calkowita_podziemia if k else None,
+                "miejsca_parkingowe": k.suma_miejsc_parkingowych if k else None,
+                "wskaznik_mp": k.wskaznik_mp if k else None,
+                "sprawnosc_nadziemia": k.wskaznik_pumiu_pcn if k else None,
+                "sprawnosc_calkowita": k.wskaznik_pumiu_pc if k else None,
+                "intensywnosc_dzialka": k.wskaznik_pumiu_pd if k else None,
+                "audit_warnings": len([a for a in s.audit_logs if a.status == "WARNING"]),
+                "audit_fails": len([a for a in s.audit_logs if a.status == "FAIL"])
+            })
+        return result
+
     def compare_projects(self, phase_ids: List[int]) -> Dict[str, Any]:
         """Porównanie wybranych faz projektów w formie macierzy wskaźników do wykresów i tabel."""
         phases = self.db.query(ProjectPhase).filter(ProjectPhase.id.in_(phase_ids)).all()
