@@ -125,3 +125,70 @@ def test_cross_phase_audit():
     pum_change = [r for r in results if "Zmiana PUM" in r.rule_name]
     assert len(pum_change) == 1
     assert pum_change[0].status == "WARNING"
+
+
+def test_auditor_pcnb_balance_pass():
+    auditor = KPIAuditor()
+    kpi_data = {
+        "pow_calkowita_nadziemia": 5000.0,
+        "pow_calkowita_balkonow_loggii": 450.0,
+        "pow_calkowita_nadziemia_z_balkonami": 5450.0
+    }
+    results = auditor.audit_phase(kpi_data)
+    pcnb_res = [r for r in results if "Pcnb = Pcn + Plb" in r.rule_name]
+    assert len(pcnb_res) == 1
+    assert pcnb_res[0].status == "PASS"
+
+
+def test_auditor_pcnb_balance_fail():
+    auditor = KPIAuditor()
+    kpi_data = {
+        "pow_calkowita_nadziemia": 5000.0,
+        "pow_calkowita_balkonow_loggii": 450.0,
+        "pow_calkowita_nadziemia_z_balkonami": 5800.0  # Niezgodne (powinno być 5450)
+    }
+    results = auditor.audit_phase(kpi_data)
+    pcnb_res = [r for r in results if "Pcnb = Pcn + Plb" in r.rule_name]
+    assert len(pcnb_res) == 1
+    assert pcnb_res[0].status == "FAIL"
+    assert "Rozbieżność bilansu Pcnb" in pcnb_res[0].message
+
+
+def test_auditor_pcnb_logic_smaller_than_pcn():
+    auditor = KPIAuditor()
+    kpi_data = {
+        "pow_calkowita_nadziemia": 5000.0,
+        "pow_calkowita_nadziemia_z_balkonami": 4800.0  # Pcnb < Pcn to błąd logiczny
+    }
+    results = auditor.audit_phase(kpi_data)
+    logic_res = [r for r in results if "Relacja Pcnb do Pcn" in r.rule_name]
+    assert len(logic_res) == 1
+    assert logic_res[0].status == "FAIL"
+    assert "Błąd logiczny" in logic_res[0].message
+
+
+def test_auditor_pcb_balance_pass():
+    auditor = KPIAuditor()
+    kpi_data = {
+        "powierzchnia_calkowita": 7000.0,
+        "pow_calkowita_balkonow_loggii": 500.0,
+        "pow_calkowita_z_balkonami": 7500.0
+    }
+    results = auditor.audit_phase(kpi_data)
+    pcb_res = [r for r in results if "Pcb = Pc + Plb" in r.rule_name]
+    assert len(pcb_res) == 1
+    assert pcb_res[0].status == "PASS"
+
+
+def test_auditor_wskaznik_pcnb_ratio():
+    auditor = KPIAuditor()
+    kpi_data = {
+        "suma_pum_i_puu": 3500.0,
+        "pow_calkowita_nadziemia_z_balkonami": 5000.0,
+        "wskaznik_pumiu_pcnb": 0.700  # 3500 / 5000 = 0.700
+    }
+    results = auditor.audit_phase(kpi_data)
+    wsk_res = [r for r in results if "PUMiU / Pcnb" in r.rule_name]
+    assert len(wsk_res) == 1
+    assert wsk_res[0].status == "PASS"
+

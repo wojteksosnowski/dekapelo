@@ -222,28 +222,28 @@ KPI_FIELD_MAPPINGS: Dict[str, List[str]] = {
         "ilość wind", "ilosc wind", "liczba dźwigów windowych", "no of elevators"
     ],
     "powierzchnia_calkowita": [
-        "powierzchnia całkowita (bez balkonów i loggi)", "powierzchnia całkowita (pc)", "gross area (pc)"
+        "powierzchnia całkowita (bez balkonów i loggi)", "powierzchnia całkowita (bez balkonów", "powierzchnia całkowita bez balkonów", "powierzchnia całkowita (pc)", "gross area (pc)"
     ],
     "pow_calkowita_balkonow_loggii": [
-        "powierzchnia całkowita balkonów i loggi", "powierzchnia loggi i balkonów"
+        "powierzchnia całkowita balkonów i loggi", "powierzchnia całkowita balkonów i loggii", "powierzchnia loggi i balkonów", "powierzchnia balkonów i loggii", "area of balconies and loggias", "plb"
     ],
     "pow_calkowita_tarasow": [
-        "powierzchnia całkowita tarasów", "powierzchnia tarasów"
+        "powierzchnia całkowita tarasów", "powierzchnia tarasów", "area of terraces"
     ],
     "pow_calkowita_z_balkonami": [
-        "powierzchnia całkowita (z uwzględnieniem balkonów i loggii)"
-    ],
-    "pow_calkowita_nadziemia": [
-        "powierzchnia całkowita nadziemia (bez balkonów i loggi)", "powierzchnia całkowita nadziemna", "overground gross area"
+        "powierzchnia całkowita (z uwzględnieniem balkonów i loggii)", "powierzchnia całkowita (z uwzględnieniem balkonów", "powierzchnia całkowita z balkonami", "pcb"
     ],
     "pow_calkowita_nadziemia_z_balkonami": [
-        "powierzchnia całkowita nadziemia (z uwzględnieniem balkonów i loggii)"
+        "powierzchnia całkowita nadziemia (z uwzględnieniem balkonów i loggii)", "powierzchnia całkowita nadziemia (z uwzględnieniem balkonów", "powierzchnia całkowita nadziemia (z balkonami", "powierzchnia całkowita nadziemia z balkonami", "pcnb"
+    ],
+    "pow_calkowita_nadziemia": [
+        "powierzchnia całkowita nadziemia (bez balkonów i loggi)", "powierzchnia całkowita nadziemia (bez balkonów", "powierzchnia całkowita nadziemia bez balkonów", "powierzchnia całkowita nadziemna", "overground gross area", "pcn"
     ],
     "pow_calkowita_podziemia": [
-        "powierzchnia całkowita części podziemnej (garażu)", "underground gross area"
+        "powierzchnia całkowita części podziemnej (garażu)", "powierzchnia całkowita podziemna", "underground gross area", "pcp", "pcg"
     ],
     "powierzchnia_elewacji": [
-        "powierzchnia elewacji", "facade area"
+        "powierzchnia elewacji", "facade area", "pe"
     ],
 
     # 5. Wskaźniki Sprawności i Urbanistyczne

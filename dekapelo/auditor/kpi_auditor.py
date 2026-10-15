@@ -53,6 +53,9 @@ class KPIAuditor:
         # 2. Bilans Powierzchni Całkowitej (Pc == Pcn + Pcp)
         pc = kpi_data.get("powierzchnia_calkowita")
         pcn = kpi_data.get("pow_calkowita_nadziemia")
+        pcnb = kpi_data.get("pow_calkowita_nadziemia_z_balkonami")
+        pcb = kpi_data.get("pow_calkowita_z_balkonami")
+        plb = kpi_data.get("pow_calkowita_balkonow_loggii")
         pcp = kpi_data.get("pow_calkowita_podziemia")
 
         if pc is not None and pcn is not None and pcp is not None:
@@ -63,7 +66,7 @@ class KPIAuditor:
                     category="MATH",
                     rule_name="Bilans Powierzchni Całkowitej Pc = Pcn + Pcp",
                     status="PASS",
-                    message=f"Suma nadziemia i podziemia ({expected_pc:.2f} m²) zgodna z Pc ({pc:.2f} m²)",
+                    message=f"Suma nadziemia bez balkonów ({pcn:.2f} m²) i podziemia ({pcp:.2f} m²) zgodna z Pc ({pc:.2f} m²)",
                     expected_value=expected_pc,
                     actual_value=pc
                 ))
@@ -75,6 +78,63 @@ class KPIAuditor:
                     message=f"Niezgodność bilansu Pc: Pcn ({pcn:.2f}) + Pcp ({pcp:.2f}) = {expected_pc:.2f} m², a Pc = {pc:.2f} m² (różnica {diff:.2f} m²)",
                     expected_value=expected_pc,
                     actual_value=pc
+                ))
+
+        # 2b. Rozróżnienie i Bilans Nadziemia z Balkonami i Loggiami (Pcnb == Pcn + Plb)
+        if pcn is not None and pcnb is not None:
+            if plb is not None:
+                expected_pcnb = pcn + plb
+                diff_pcnb = abs(pcnb - expected_pcnb)
+                if diff_pcnb <= self.tolerance_surface * 2:
+                    results.append(AuditResult(
+                        category="MATH",
+                        rule_name="Bilans Nadziemia z Balkonami (Pcnb = Pcn + Plb)",
+                        status="PASS",
+                        message=f"Pcn ({pcn:.2f} m²) + balkony/loggie ({plb:.2f} m²) = {expected_pcnb:.2f} m² zgodne z Pcnb ({pcnb:.2f} m²)",
+                        expected_value=expected_pcnb,
+                        actual_value=pcnb
+                    ))
+                else:
+                    results.append(AuditResult(
+                        category="MATH",
+                        rule_name="Bilans Nadziemia z Balkonami (Pcnb = Pcn + Plb)",
+                        status="FAIL",
+                        message=f"Rozbieżność bilansu Pcnb: Pcn ({pcn:.2f}) + Plb ({plb:.2f}) = {expected_pcnb:.2f} m², a w arkuszu Pcnb = {pcnb:.2f} m² (różnica {diff_pcnb:.2f} m²)",
+                        expected_value=expected_pcnb,
+                        actual_value=pcnb
+                    ))
+
+            if pcnb < pcn - self.tolerance_surface:
+                results.append(AuditResult(
+                    category="LOGIC",
+                    rule_name="Relacja Pcnb do Pcn",
+                    status="FAIL",
+                    message=f"Błąd logiczny: Powierzchnia nadziemia z balkonami Pcnb ({pcnb:.2f} m²) jest mniejsza niż bez balkonów Pcn ({pcn:.2f} m²)",
+                    expected_value=pcn,
+                    actual_value=pcnb
+                ))
+
+        # 2c. Bilans Powierzchni Całkowitej z Balkonami (Pcb == Pc + Plb)
+        if pc is not None and pcb is not None and plb is not None:
+            expected_pcb = pc + plb
+            diff_pcb = abs(pcb - expected_pcb)
+            if diff_pcb <= self.tolerance_surface * 2:
+                results.append(AuditResult(
+                    category="MATH",
+                    rule_name="Bilans Całkowity z Balkonami (Pcb = Pc + Plb)",
+                    status="PASS",
+                    message=f"Pc ({pc:.2f} m²) + balkony/loggie ({plb:.2f} m²) = {expected_pcb:.2f} m² zgodne z Pcb ({pcb:.2f} m²)",
+                    expected_value=expected_pcb,
+                    actual_value=pcb
+                ))
+            else:
+                results.append(AuditResult(
+                    category="MATH",
+                    rule_name="Bilans Całkowity z Balkonami (Pcb = Pc + Plb)",
+                    status="WARNING",
+                    message=f"Rozbieżność Pcb: Pc ({pc:.2f}) + Plb ({plb:.2f}) = {expected_pcb:.2f} m², w arkuszu Pcb = {pcb:.2f} m² (różnica {diff_pcb:.2f} m²)",
+                    expected_value=expected_pcb,
+                    actual_value=pcb
                 ))
 
         # 3. Średnia Powierzchnia Mieszkania (śrm == PUM / im)
@@ -180,7 +240,7 @@ class KPIAuditor:
                         ))
                         break
 
-        # 6. Wskaźnik Sprawności Nadziemia (PUMiU / Pcn)
+        # 6. Wskaźnik Sprawności Nadziemia bez balkonów (PUMiU / Pcn)
         wsk_pcn = kpi_data.get("wskaznik_pumiu_pcn")
         uzytkowa = pumiu if pumiu is not None else pum
         if wsk_pcn is not None and uzytkowa is not None and pcn and pcn > 0:
@@ -189,20 +249,44 @@ class KPIAuditor:
             if diff <= self.tolerance_ratio:
                 results.append(AuditResult(
                     category="MATH",
-                    rule_name="Wskaźnik Sprawności Nadziemia (PUMiU / Pcn)",
+                    rule_name="Wskaźnik Sprawności Nadziemia bez balkonów (PUMiU / Pcn)",
                     status="PASS",
-                    message=f"Wskaźnik sprawności nadziemia {wsk_pcn:.3f} zgodny z formułą ({calc_wsk_pcn:.3f})",
+                    message=f"Wskaźnik sprawności nadziemia bez balkonów {wsk_pcn:.3f} zgodny z formułą ({calc_wsk_pcn:.3f})",
                     expected_value=calc_wsk_pcn,
                     actual_value=wsk_pcn
                 ))
             else:
                 results.append(AuditResult(
                     category="MATH",
-                    rule_name="Wskaźnik Sprawności Nadziemia (PUMiU / Pcn)",
+                    rule_name="Wskaźnik Sprawności Nadziemia bez balkonów (PUMiU / Pcn)",
                     status="WARNING",
-                    message=f"Wskaźnik sprawności nadziemia podano {wsk_pcn:.3f}, z obliczeń PUMiU/Pcn wynika {calc_wsk_pcn:.3f}",
+                    message=f"Wskaźnik sprawności nadziemia bez balkonów podano {wsk_pcn:.3f}, z obliczeń PUMiU/Pcn wynika {calc_wsk_pcn:.3f}",
                     expected_value=calc_wsk_pcn,
                     actual_value=wsk_pcn
+                ))
+
+        # 6b. Wskaźnik Sprawności Nadziemia z balkonami (PUMiU / Pcnb)
+        wsk_pcnb = kpi_data.get("wskaznik_pumiu_pcnb")
+        if wsk_pcnb is not None and uzytkowa is not None and pcnb and pcnb > 0:
+            calc_wsk_pcnb = uzytkowa / pcnb
+            diff_wsk_pcnb = abs(wsk_pcnb - calc_wsk_pcnb)
+            if diff_wsk_pcnb <= self.tolerance_ratio:
+                results.append(AuditResult(
+                    category="MATH",
+                    rule_name="Wskaźnik Sprawności Nadziemia z balkonami (PUMiU / Pcnb)",
+                    status="PASS",
+                    message=f"Wskaźnik sprawności nadziemia z balkonami {wsk_pcnb:.3f} zgodny z formułą ({calc_wsk_pcnb:.3f})",
+                    expected_value=calc_wsk_pcnb,
+                    actual_value=wsk_pcnb
+                ))
+            else:
+                results.append(AuditResult(
+                    category="MATH",
+                    rule_name="Wskaźnik Sprawności Nadziemia z balkonami (PUMiU / Pcnb)",
+                    status="WARNING",
+                    message=f"Wskaźnik sprawności nadziemia z balkonami podano {wsk_pcnb:.3f}, z obliczeń PUMiU/Pcnb wynika {calc_wsk_pcnb:.3f}",
+                    expected_value=calc_wsk_pcnb,
+                    actual_value=wsk_pcnb
                 ))
 
         # 7. Wskaźnik Mieszkań na Windę (il.m. / iw)
